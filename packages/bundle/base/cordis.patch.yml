@@ -548,3 +548,10 @@
 
     - id: llm-deepseek-account
       name: '@deepseek-ai/dsh-llm-deepseek-account'
+
+    # The Inkstone (端砚) orbit gateway route (KEP-0002 M1). Until the
+    # inkstone-account service lands (M2), authentication reads the JWT named
+    # by `tokenEnv` (default INKSTONE_JWT); the static catalog is replaced by
+    # the gateway listing in M3.
+    - id: llm-inkstone
+      name: '@deepseek-ai/dsh-llm-inkstone'
