@@ -8,7 +8,12 @@
 cd ~/work/deepseek-harness
 git checkout ours/provider && git pull
 pnpm install --prefer-offline
+pnpm build        # 首次必跑：生成各包 lib/ 产物；漏掉它 dev:desktop 会
+                  # 报 ERR_MODULE_NOT_FOUND（dsh-official-bundles/lib/index.js）
 ```
+
+`pnpm build` 全绿标志：`run-gates: 10 passed` / `377 client artifact(s)`，
+增量约 1~2 分钟；上游 rebase 后需要重跑。
 
 ## 1. 单元测试（应全绿）
 
