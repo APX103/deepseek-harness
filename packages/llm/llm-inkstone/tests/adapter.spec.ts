@@ -16,6 +16,7 @@ const settings: Config = {
   thinking: false,
   thinkingBudgetTokens: 0,
   locale: 'zh-CN',
+  catalogMaxAgeMs: 0,
   models: [{ id: 'auto', name: 'Inkstone Auto', contextWindow: 131072, maxTokens: 8192 }],
 }
 

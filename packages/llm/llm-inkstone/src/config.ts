@@ -37,7 +37,9 @@ export interface Config {
   readonly thinkingBudgetTokens: number
   /** Locale reported in gateway metadata. */
   readonly locale: string
-  /** Static catalog; the gateway's model listing arrives in M3. */
+  /** How long one gateway model listing stays fresh; `0` refreshes on every access. */
+  readonly catalogMaxAgeMs: number
+  /** Fallback catalog used before the first listing and whenever it fails. */
   readonly models: readonly InkstoneModelEntry[]
 }
 
@@ -58,6 +60,7 @@ export const Config = z.object({
   thinking: z.boolean().default(false),
   thinkingBudgetTokens: z.number().default(0),
   locale: z.string().default('zh-CN'),
+  catalogMaxAgeMs: z.number().default(600_000),
   models: z
     .array(modelEntry)
     .default([{ id: 'auto', name: 'Inkstone Auto', contextWindow: 131072, maxTokens: 8192 }]),

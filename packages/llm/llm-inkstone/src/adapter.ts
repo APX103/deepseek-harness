@@ -17,14 +17,16 @@ import type {
   GenerateOptions,
   LlmModelInfo,
   LlmProviderInfo,
+  LlmResolvedModelInfo,
   StreamChunk,
   TokenUsage,
   ToolCallId,
 } from '@deepseek-ai/dsh-llm'
 import { brandString } from '@deepseek-ai/dsh-brand'
+import { fetchGatewayCatalog } from './catalog.ts'
 import { rejectionFailure, sseErrorFailure } from './failure.ts'
 import { assembleInferenceRequest, newInferenceIds, readOrbitSse } from './protocol.ts'
-import type { Config } from './config.ts'
+import type { Config, InkstoneModelEntry } from './config.ts'
 
 const INFERENCE_PATH = '/local-agent/messages'
 const MAX_REJECTION_BYTES = 2 * 1024 * 1024
@@ -85,6 +87,7 @@ function mapFinishReason(stopReason: string, toolCallCount: number): FinishReaso
 export class InkstoneAdapter extends LlmAdapter {
   readonly #deps: InkstoneAdapterDeps
   readonly #chatId: number
+  #catalog: { entries: readonly InkstoneModelEntry[]; fetchedAt: number } | undefined
 
   constructor(deps: InkstoneAdapterDeps) {
     super()
@@ -98,16 +101,46 @@ export class InkstoneAdapter extends LlmAdapter {
     return { id: provider, name: 'Inkstone · 端砚' }
   }
 
-  override listModels(provider: string): Promise<readonly LlmModelInfo[]> {
-    return Promise.resolve(
-      this.#deps.settings().models.map(entry => ({
-        provider,
-        id: entry.id,
-        name: entry.name,
-        contextWindow: entry.contextWindow,
-        maxTokens: entry.maxTokens,
-      })),
-    )
+  override async listModels(provider: string): Promise<readonly LlmModelInfo[]> {
+    const entries = await this.#catalogEntries()
+    return entries.map(entry => ({
+      provider,
+      id: entry.id,
+      name: entry.name,
+      contextWindow: entry.contextWindow,
+      maxTokens: entry.maxTokens,
+    }))
+  }
+
+  override async resolveModel(provider: string, model: string, _signal?: AbortSignal): Promise<LlmResolvedModelInfo> {
+    const entries = await this.#catalogEntries()
+    const entry = entries.find(candidate => candidate.id === model)
+    // LlmResolvedModelInfo carries identity only; the listing's capacities
+    // reach the picker through listModels.
+    return { provider, id: model, name: entry?.name ?? model }
+  }
+
+  /**
+   * The offered catalog: the gateway listing (kept fresh for
+   * `catalogMaxAgeMs`) when a token and the listing are available, otherwise
+   * the last good listing, otherwise the static fallback. The listing is the
+   * same one the Token Plan side serves, keeping the picker consistent.
+   */
+  async #catalogEntries(): Promise<readonly InkstoneModelEntry[]> {
+    const config = this.#deps.settings()
+    const now = Date.now()
+    if (this.#catalog !== undefined && now - this.#catalog.fetchedAt < config.catalogMaxAgeMs) {
+      return this.#catalog.entries
+    }
+    const token = await this.#deps.resolveToken()
+    if (token === undefined || token === '') return config.models
+    try {
+      const entries = await fetchGatewayCatalog(config.baseURL, token, this.#deps.fetchImpl ?? fetch)
+      this.#catalog = { entries, fetchedAt: now }
+      return entries
+    } catch {
+      return this.#catalog?.entries ?? config.models
+    }
   }
 
   override async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {

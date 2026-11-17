@@ -487,6 +487,7 @@
     { "path": "./packages/experimental/ptc-runtime-python" },
     { "path": "./packages/ptc-runtime/ptc-runtime-node" },
     { "path": "./packages/credentials/inkstone-account" },
+    { "path": "./packages/inkstone/token-plan" },
     { "path": "./packages/llm/llm-deepseek" },
     { "path": "./packages/llm/llm-deepseek-api-key" },
     { "path": "./packages/llm/llm-deepseek-account" },

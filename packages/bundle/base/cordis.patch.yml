@@ -554,6 +554,11 @@
     - id: inkstone-account
       name: '@deepseek-ai/dsh-inkstone-account'
 
+    # The Inkstone (端砚) Token Plan service (KEP-0002 M3): 墨点 balance,
+    # free grant, and credit-increase operations for the account above.
+    - id: inkstone-token-plan
+      name: '@deepseek-ai/dsh-inkstone-token-plan'
+
     # The Inkstone (端砚) orbit gateway route (KEP-0002 M1/M2). Authentication
     # prefers the account service above, falling back to the JWT named by
     # `tokenEnv` (default INKSTONE_JWT); the static catalog is replaced by
