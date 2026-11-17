@@ -33,8 +33,8 @@ const MAX_REJECTION_BYTES = 2 * 1024 * 1024
 export interface InkstoneAdapterDeps {
   /** Current validated configuration generation. */
   readonly settings: () => Config
-  /** M1 bearer JWT source; M2 swaps this for the inkstone-account service. */
-  readonly resolveToken: () => string | undefined
+  /** Bearer JWT source; the inkstone-account service with an environment fallback. */
+  readonly resolveToken: () => string | undefined | Promise<string | undefined>
   /** Injectable fetch for tests; defaults to the global fetch. */
   readonly fetchImpl?: typeof fetch
   /** Injectable identity source for tests. */
@@ -112,16 +112,19 @@ export class InkstoneAdapter extends LlmAdapter {
 
   override async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     const config = this.#deps.settings()
-    const token = this.#deps.resolveToken()
+    const token = await this.#deps.resolveToken()
     if (token === undefined) {
       throw new LlmError(
-        `Inkstone requires a sign-in; for M1 export ${config.tokenEnv} with the staging JWT (M2 adds account sign-in).`,
+        `Inkstone requires a sign-in; sign in through the account provider, or export ${config.tokenEnv} as a fallback.`,
         'ACCOUNT_SIGN_IN_REQUIRED',
       )
     }
     const request = assembleInferenceRequest(options, config, {
       ...(this.#deps.newIds !== undefined ? this.#deps.newIds() : newInferenceIds()),
-      chatId: this.#chatId,
+      // A configured chat id points at a real orbit chat; otherwise the random
+      // id only satisfies local validation and the live gateway answers
+      // CHAT_NOT_FOUND until chat bootstrap lands (KEP-0002 M2).
+      chatId: config.chatId > 0 ? config.chatId : this.#chatId,
     })
     const fetchImpl = this.#deps.fetchImpl ?? fetch
     let response: Response
@@ -189,7 +192,7 @@ export class InkstoneAdapter extends LlmAdapter {
         case 'message_start':
           break
         case 'thinking_delta': {
-          const text = String(event.text ?? '')
+          const text = event.text ?? ''
           if (openText?.kind === 'reasoning') {
             openText.text += text
             yield { type: 'reasoning-delta', index: blockIndex, text }
@@ -199,7 +202,7 @@ export class InkstoneAdapter extends LlmAdapter {
           break
         }
         case 'content_delta': {
-          const text = String(event.text ?? '')
+          const text = event.text ?? ''
           if (openText?.kind === 'text') {
             openText.text += text
             yield { type: 'text-delta', index: blockIndex, text }
@@ -211,13 +214,13 @@ export class InkstoneAdapter extends LlmAdapter {
         case 'tool_use_start': {
           yield* endOpen()
           blockIndex += 1
-          openTool = { index: blockIndex, id: String(event.id ?? ''), name: String(event.name ?? ''), json: '' }
+          openTool = { index: blockIndex, id: event.id ?? '', name: event.name ?? '', json: '' }
           yield { type: 'block-start', index: blockIndex, blockType: 'tool-call' as ContentBlockType }
           break
         }
         case 'tool_input_delta': {
-          if (openTool === undefined || openTool.id !== String(event.id ?? '')) break
-          const delta = String(event.partial_json ?? '')
+          if (openTool === undefined || openTool.id !== (event.id ?? '')) break
+          const delta = event.partial_json ?? ''
           yield {
             type: 'tool-call-delta',
             index: openTool.index,
@@ -241,7 +244,7 @@ export class InkstoneAdapter extends LlmAdapter {
         case 'message_end': {
           yield* endOpen()
           finished = true
-          yield { type: 'finish', reason: mapFinishReason(String(event.stop_reason ?? 'stop'), toolCallCount) }
+          yield { type: 'finish', reason: mapFinishReason(event.stop_reason ?? 'stop', toolCallCount) }
           break
         }
         case 'error':

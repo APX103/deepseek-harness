@@ -29,10 +29,19 @@ export const inject = ['llm']
 const PROVIDER = 'inkstone'
 
 export function apply(ctx: Context, config: Config): void {
-  const settings = (): Config => ({ ...config })
+  // The schemastery instance is read-only here; spreading a class instance
+  // would drop its prototype, so the validated object is shared as-is.
+  const settings = (): Config => config
   const adapter = new InkstoneAdapter({
     settings,
-    resolveToken: () => {
+    resolveToken: async () => {
+      // The account service takes precedence; the environment stays as a
+      // fallback so the route works before any sign-in surface exists.
+      const account = ctx.get('inkstoneAccount') as
+        | { resolveToken?: (destination?: string) => Promise<string | undefined> }
+        | undefined
+      const fromService = await account?.resolveToken?.(config.baseURL)
+      if (fromService !== undefined && fromService !== '') return fromService
       const raw = process.env[settings().tokenEnv]
       const trimmed = raw?.trim()
       return trimmed === undefined || trimmed === '' ? undefined : trimmed

@@ -33,7 +33,7 @@ const TOKEN_PLAN_FAILURE_STATUS: Readonly<Record<TokenPlanFailureCode, number>> 
 function readCodeFields(value: unknown): string[] {
   if (value === null || typeof value !== 'object') return []
   const record = value as Record<string, unknown>
-  const data = record['data'] as unknown
+  const data = record['data']
   const candidates = [
     record['code'],
     record['error_code'],
@@ -52,12 +52,8 @@ function readCodeFields(value: unknown): string[] {
 
 /** The Token Plan code carried by a rejection envelope, when any matches the closed set. */
 export function tokenPlanFailureCode(envelope: unknown): TokenPlanFailureCode | undefined {
-  for (const candidate of readCodeFields(envelope)) {
-    if ((TOKEN_PLAN_FAILURE_CODES as readonly string[]).includes(candidate)) {
-      return candidate as TokenPlanFailureCode
-    }
-  }
-  return undefined
+  const candidates = readCodeFields(envelope)
+  return TOKEN_PLAN_FAILURE_CODES.find(failure => candidates.includes(failure))
 }
 
 function failureOf(message: string, code: `HTTP_${number}` | 'ACCOUNT_QUOTA' | 'ACCOUNT_TOKEN_INVALID' | 'RATE_LIMIT' | 'SERVER' | 'INVALID_RESPONSE', status?: number): LlmError {

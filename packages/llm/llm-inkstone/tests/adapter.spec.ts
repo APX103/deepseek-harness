@@ -11,6 +11,7 @@ import type { OrbitSseEvent } from '../src/protocol.ts'
 const settings: Config = {
   baseURL: 'https://gw.example/api/orbit/v1',
   tokenEnv: 'INKSTONE_JWT',
+  chatId: 0,
   defaultModel: 'auto',
   thinking: false,
   thinkingBudgetTokens: 0,
@@ -158,7 +159,7 @@ describe('inkstone request assembly', () => {
     expect(headers['authorization']).toBe('Bearer jwt-token')
     expect(headers['accept']).toBe('text/event-stream')
     expect(typeof headers['user-agent']).toBe('string')
-    const body = JSON.parse(String(init.body)) as Record<string, unknown>
+    const body = JSON.parse((init.body ?? '') as string) as Record<string, unknown>
     expect(body['protocol_version']).toBe('2.0')
     expect(body['inference_kind']).toBe('detached')
     expect(body['chat_id']).toBeGreaterThan(0)
@@ -184,7 +185,7 @@ describe('inkstone request assembly', () => {
       ],
     } as unknown as GenerateOptions
     await collect(options, fetchImpl)
-    const body = JSON.parse(String(lastCall(fetchImpl).init.body)) as { messages: unknown[] }
+    const body = JSON.parse((lastCall(fetchImpl).init.body ?? '') as string) as { messages: unknown[] }
     expect(body.messages).toEqual([
       { role: 'user', content: [{ type: 'text', text: 'weather?' }] },
       { role: 'assistant', content: [{ type: 'tool_use', id: 't9', name: 'get_weather', input: { city: 'sh' } }] },

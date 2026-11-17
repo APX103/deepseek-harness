@@ -21,8 +21,14 @@ export interface InkstoneModelEntry {
 export interface Config {
   /** Orbit gateway root, for example `https://discovery-staging.intern-ai.org.cn/api/orbit/v1`. */
   readonly baseURL: string
-  /** Environment variable holding the bearer JWT for M1; M2 replaces this with the account service. */
+  /** Environment variable holding the bearer JWT fallback; the inkstone-account service takes precedence. */
   readonly tokenEnv: string
+  /**
+   * Existing orbit chat id for `/local-agent/messages`; the gateway requires a
+   * pre-created local-agent chat. `0` uses a random id, which the live gateway
+   * rejects with CHAT_NOT_FOUND until M2 lands chat bootstrap.
+   */
+  readonly chatId: number
   /** Model id sent when the caller names none; the gateway's `auto` routes by task. */
   readonly defaultModel: string
   /** Whether to request thinking output. */
@@ -47,6 +53,7 @@ export const Config = z.object({
     .string()
     .default('https://discovery-staging.intern-ai.org.cn/api/orbit/v1'),
   tokenEnv: z.string().default('INKSTONE_JWT'),
+  chatId: z.number().default(0),
   defaultModel: z.string().default('auto'),
   thinking: z.boolean().default(false),
   thinkingBudgetTokens: z.number().default(0),
