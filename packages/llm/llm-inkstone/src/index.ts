@@ -35,16 +35,13 @@ export function apply(ctx: Context, config: Config): void {
   const adapter = new InkstoneAdapter({
     settings,
     resolveToken: async () => {
-      // The account service takes precedence; the environment stays as a
-      // fallback so the route works before any sign-in surface exists.
+      // D8 (KEP-0002): platform-only and login-gated — the account service
+      // is the sole token source; no environment fallback exists.
       const account = ctx.get('inkstoneAccount') as
         | { resolveToken?: (destination?: string) => Promise<string | undefined> }
         | undefined
       const fromService = await account?.resolveToken?.(config.baseURL)
-      if (fromService !== undefined && fromService !== '') return fromService
-      const raw = process.env[settings().tokenEnv]
-      const trimmed = raw?.trim()
-      return trimmed === undefined || trimmed === '' ? undefined : trimmed
+      return fromService === '' ? undefined : fromService
     },
   })
   ctx.llm.registerAdapter([PROVIDER], adapter)

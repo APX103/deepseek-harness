@@ -147,10 +147,7 @@ export class InkstoneAdapter extends LlmAdapter {
     const config = this.#deps.settings()
     const token = await this.#deps.resolveToken()
     if (token === undefined) {
-      throw new LlmError(
-        `Inkstone requires a sign-in; sign in through the account provider, or export ${config.tokenEnv} as a fallback.`,
-        'ACCOUNT_SIGN_IN_REQUIRED',
-      )
+      throw new LlmError('Inkstone requires a sign-in through the account provider.', 'ACCOUNT_SIGN_IN_REQUIRED')
     }
     const request = assembleInferenceRequest(options, config, {
       ...(this.#deps.newIds !== undefined ? this.#deps.newIds() : newInferenceIds()),

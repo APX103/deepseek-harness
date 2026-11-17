@@ -8,7 +8,6 @@ import type { Config } from '../src/config.ts'
 
 const settings: Config = {
   baseURL: 'https://gw.example/api/orbit/v1',
-  tokenEnv: 'INKSTONE_JWT',
   chatId: 0,
   defaultModel: 'auto',
   thinking: false,
@@ -70,7 +69,8 @@ describe('inkstone gateway catalog', () => {
       { provider: 'inkstone', id: 'Auto', name: 'Default', contextWindow: 1000000, maxTokens: 16384 },
       { provider: 'inkstone', id: '书生-A1.5', name: '书生-A1.5', contextWindow: 256000, maxTokens: 16384 },
     ])
-    expect(String(fetchImpl.mock.calls[0]?.[0])).toBe('https://gw.example/api/orbit/v1/local-agent/models')
+    const requested = fetchImpl.mock.calls[0]?.[0] as string | undefined
+    expect(requested).toBe('https://gw.example/api/orbit/v1/local-agent/models')
   })
 
   it('resolves model metadata from the listing', async () => {

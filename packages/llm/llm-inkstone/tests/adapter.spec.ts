@@ -10,7 +10,6 @@ import type { OrbitSseEvent } from '../src/protocol.ts'
 
 const settings: Config = {
   baseURL: 'https://gw.example/api/orbit/v1',
-  tokenEnv: 'INKSTONE_JWT',
   chatId: 0,
   defaultModel: 'auto',
   thinking: false,

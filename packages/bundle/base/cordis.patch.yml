@@ -34,8 +34,12 @@
     - id: llm
       name: '@deepseek-ai/dsh-llm'
 
+    # D8 (KEP-0002, 2026-11-17): platform-only — the product ships exactly the
+    # inkstone route and no user-configurable provider surfaces, so the
+    # DeepSeek api extensions stay off.
     - id: deepseek-llm-api-extensions
       name: '@deepseek-ai/dsh-deepseek-llm-api-extensions'
+      disabled: true
 
     - id: session
       name: '@deepseek-ai/dsh-session'
@@ -90,8 +94,8 @@
     - id: agent-default-model
       name: '@deepseek-ai/dsh-agent-default-model'
       config:
-        provider: deepseek-official
-        model: deepseek-flash
+        provider: inkstone
+        model: auto
 
     - id: jobs
       name: '@deepseek-ai/dsh-jobs-local'
@@ -125,15 +129,12 @@
     - id: credentials
       name: '@deepseek-ai/dsh-credentials-local'
 
-    # The pi-ai multi-provider twin, mounted dormant: zero routes (and no extra
-    # models in the picker) until a `llm-pi-ai:` settings section supplies provider
-    # profiles — then those routes register live, keys resolving per request
-    # through their apiKeyEnv references, and drop again when the section empties.
-    # Supplying those profiles is exactly what the web Models page does. Which
-    # adapters exist is composition; which providers run is the user's settings
-    # document.
+    # D8 (KEP-0002, 2026-11-17): platform-only — users cannot configure their
+    # own providers, so the pi-ai multi-provider twin stays off and the Models
+    # page offers no custom-gateway profiles.
     - id: llm-pi-ai
       name: '@deepseek-ai/dsh-llm-pi-ai'
+      disabled: true
 
     - id: session-persistence-jsonl
       name: '@deepseek-ai/dsh-session-persistence-jsonl'
@@ -543,11 +544,16 @@
     # request from the `llm-deepseek:` settings section over this entry, with the
     # key coming from the credential store below. Thinking defaults are a deployment
     # choice.
+    # D8 (KEP-0002, 2026-11-17): platform-only — the DeepSeek api-key and
+    # account routes stay off; every model call goes through llm-inkstone
+    # behind the inkstone-account sign-in.
     - id: llm-deepseek
       name: '@deepseek-ai/dsh-llm-deepseek-api-key'
+      disabled: true
 
     - id: llm-deepseek-account
       name: '@deepseek-ai/dsh-llm-deepseek-account'
+      disabled: true
 
     # The Inkstone (端砚) account service (KEP-0002 M2): unit SSO sign-in
     # (password or uaa code) and the grant store behind the route below.
@@ -559,9 +565,8 @@
     - id: inkstone-token-plan
       name: '@deepseek-ai/dsh-inkstone-token-plan'
 
-    # The Inkstone (端砚) orbit gateway route (KEP-0002 M1/M2). Authentication
-    # prefers the account service above, falling back to the JWT named by
-    # `tokenEnv` (default INKSTONE_JWT); the static catalog is replaced by
-    # the gateway listing in M3.
+    # The Inkstone (端砚) orbit gateway route (KEP-0002 M1–M3): the only
+    # provider, login-gated through the account service above; the catalog is
+    # the gateway's own /local-agent/models listing with the static fallback.
     - id: llm-inkstone
       name: '@deepseek-ai/dsh-llm-inkstone'

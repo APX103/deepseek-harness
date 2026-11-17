@@ -38,10 +38,10 @@ export function apply(ctx: Context, config: Config): void {
     'inkstoneTokenPlan',
     new InkstoneTokenPlan(ctx, config, {
       resolveToken: async () => {
+        // D8 (KEP-0002): login-gated — the account service is the sole token
+        // source; no environment fallback exists.
         const fromService = await account()?.resolveToken?.()
-        if (fromService !== undefined && fromService !== '') return fromService
-        const raw = process.env['INKSTONE_JWT']?.trim()
-        return raw === undefined || raw === '' ? undefined : raw
+        return fromService === '' ? undefined : fromService
       },
       resolveSsoUid: () => account()?.state?.().user?.ssoUid,
     }),
