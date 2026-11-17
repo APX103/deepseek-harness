@@ -4,7 +4,7 @@
  */
 import { generateKeyPairSync } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
-import { UaaPasswordClient, decryptPasswordForTests } from '../src/password-login.ts'
+import { UaaPasswordClient, decryptCredentialForTests } from '../src/password-login.ts'
 import type { Config } from '../src/config.ts'
 import type { InkstoneAccountError } from '../src/errors.ts'
 
@@ -45,15 +45,15 @@ describe('inkstone uaa password login', () => {
       }
       throw new Error(`unexpected ${input}`)
     })
-    const client = new UaaPasswordClient({ config, fetch: fetchImpl })
+    const client = new UaaPasswordClient({ config, fetch: fetchImpl, now: () => 1_700_000_000_000 })
     const code = await client.signInWithPassword('alice', 's3cret-pass')
     expect(code).toBe('uaa::code::grant-1')
-    const sent = captured[0]?.['data'] as Record<string, unknown>
-    expect(sent['username']).toBe('alice')
-    expect(sent['clientId']).toBe('client-1')
+    const sent = captured[0] as Record<string, unknown>
+    expect(sent['account']).toBe('alice')
+    expect(sent['autoLogin']).toBe(true)
     expect(typeof sent['password']).toBe('string')
-    expect(sent['password']).not.toContain('s3cret')
-    expect(decryptPasswordForTests(privateKey, String(sent['password']))).toBe('s3cret-pass')
+    expect(String(sent['password'])).not.toContain('s3cret')
+    expect(decryptCredentialForTests(privateKey, String(sent['password']))).toBe('alice||s3cret-pass1700000000')
   })
 
   it('maps envelope rejections and transport failures', async () => {

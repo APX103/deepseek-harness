@@ -24,6 +24,8 @@ export type UaaFetch = (input: string, init: RequestInit) => Promise<Response>
 export interface UaaPasswordClientDeps {
   readonly config: Config
   readonly fetch: UaaFetch
+  /** Clock for the credential timestamp; injectable for tests. */
+  readonly now?: () => number
 }
 
 /** Wrap one public key value as a KeyObject, accepting PEM or base64 DER. */
@@ -38,16 +40,27 @@ export function loadPublicKey(value: string): KeyObject {
   }
 }
 
-/** Encrypt one password with the gateway's public key (RSA PKCS#1 v1.5, the JSEncrypt convention). */
-export function encryptPassword(publicKey: string, password: string): string {
+/** The SSO form's plaintext convention: `${account}||${password}${unixSeconds}`. */
+function credentialPlaintext(account: string, password: string, nowSeconds: number): string {
+  return `${account}||${password}${nowSeconds}`
+}
+
+/** Encrypt one credential the way the SSO form does (RSA PKCS#1 v1.5, JSEncrypt convention). */
+export function encryptCredential(
+  publicKey: string,
+  account: string,
+  password: string,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): string {
+  const plaintext = credentialPlaintext(account, password, nowSeconds)
   return publicEncrypt(
     { key: loadPublicKey(publicKey), padding: constants.RSA_PKCS1_PADDING },
-    Buffer.from(password, 'utf8'),
+    Buffer.from(plaintext, 'utf8'),
   ).toString('base64')
 }
 
-/** Decrypt helper mirrored for tests: what the gateway does with the password. */
-export function decryptPasswordForTests(privateKey: KeyObject, encrypted: string): string {
+/** Decrypt helper mirrored for tests: what the gateway does with the credential. */
+export function decryptCredentialForTests(privateKey: KeyObject, encrypted: string): string {
   return privateDecrypt(
     { key: privateKey, padding: constants.RSA_PKCS1_PADDING },
     Buffer.from(encrypted, 'base64'),
@@ -57,9 +70,11 @@ export function decryptPasswordForTests(privateKey: KeyObject, encrypted: string
 /** Client for the uaa password surface. */
 export class UaaPasswordClient {
   readonly #deps: UaaPasswordClientDeps
+  readonly #now: () => number
 
   constructor(deps: UaaPasswordClientDeps) {
     this.#deps = deps
+    this.#now = deps.now ?? Date.now
   }
 
   /**
@@ -68,10 +83,14 @@ export class UaaPasswordClient {
    */
   async signInWithPassword(username: string, password: string): Promise<string> {
     const publicKey = await this.#getPubKey()
-    const encrypted = encryptPassword(publicKey, password)
-    // verify-wire: field names follow the SSO form's clientId/source convention.
+    // Wire contract recovered from the SSO form (staging bundle, 2026-11-17):
+    // flat body with `account` + `autoLogin`, and the RSA plaintext is
+    // `${account}||${password}${unixSeconds}` — not the bare password.
+    const encrypted = encryptCredential(publicKey, username, password, Math.floor(this.#now() / 1000))
     const data = await this.#post(`${UAA_BASE}/login/byAccount`, {
-      data: { username, password: encrypted, clientId: this.#deps.config.clientId, source: this.#deps.config.source },
+      account: username,
+      password: encrypted,
+      autoLogin: true,
     })
     const code = readCode(data)
     if (code === undefined) {
@@ -81,7 +100,9 @@ export class UaaPasswordClient {
   }
 
   async #getPubKey(): Promise<string> {
-    const data = await this.#post(`${UAA_BASE}/cipher/getPubKey`, { data: {} })
+    // The SSO form names the key's purpose; a purposeless request may return
+    // a different key type and the login then fails validation.
+    const data = await this.#post(`${UAA_BASE}/cipher/getPubKey`, { from: 'browser', type: 'login' })
     const record = data === null || typeof data !== 'object' ? undefined : (data as Record<string, unknown>)
     const key =
       (typeof record?.['publicKey'] === 'string' && record['publicKey']) ||
@@ -112,7 +133,10 @@ export class UaaPasswordClient {
     if (!response.ok) {
       // verify-wire: the captcha challenge arrives as a distinct status or code.
       if (response.status === 401 || response.status === 403) {
-        throw new InkstoneAccountError('AUTH_CAPTCHA_REQUIRED', 'The sign-in gateway requires a captcha; use the web page for this account for now.')
+        throw new InkstoneAccountError(
+          'AUTH_CAPTCHA_REQUIRED',
+          'The sign-in gateway requires a captcha; use the web page for this account for now.',
+        )
       }
       throw new InkstoneAccountError('AUTH_REJECTED', `The sign-in gateway returned status ${response.status}.`)
     }
@@ -129,7 +153,13 @@ export class UaaPasswordClient {
     const msgCode = record['msgCode']
     if (msgCode !== undefined && msgCode !== '10000' && msgCode !== 10000 && msgCode !== 0) {
       const message = typeof record['msg'] === 'string' && record['msg'] !== '' ? record['msg'] : 'The sign-in was rejected.'
-      throw new InkstoneAccountError('AUTH_REJECTED', message)
+      const detail = JSON.stringify(record).slice(0, 400)
+      // B0501 is the human-verification gate (verified against staging);
+      // the captcha loop lands with the first real-credential run.
+      if (msgCode === 'B0501' || msgCode === 'B0502') {
+        throw new InkstoneAccountError('AUTH_CAPTCHA_REQUIRED', `${message} [${detail}]`)
+      }
+      throw new InkstoneAccountError('AUTH_REJECTED', `${message} [${detail}]`)
     }
     return record['data'] ?? record
   }

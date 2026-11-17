@@ -20,7 +20,7 @@ export { readJwtFromAuthResponse, sanitizeAuthUser } from './protocol.ts'
 export type { InkstoneUser } from './protocol.ts'
 export { AuthApiClient } from './api-client.ts'
 export type { AuthFetch } from './api-client.ts'
-export { UaaPasswordClient, encryptPassword } from './password-login.ts'
+export { UaaPasswordClient, encryptCredential } from './password-login.ts'
 export { AccountSession } from './session.ts'
 export type {
   AccountSessionDeps,
