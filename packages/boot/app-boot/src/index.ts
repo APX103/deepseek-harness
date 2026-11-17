@@ -155,7 +155,7 @@ const BOOTSTRAP_NAMES = new Set([
 ])
 
 /** Name prefixes no discovered file may set. */
-const BOOTSTRAP_PREFIXES = ['DSH_', 'XDG_', 'DYLD_', 'BASH_FUNC_']
+const BOOTSTRAP_PREFIXES = ['DSH_', 'INKSTONE_', 'XDG_', 'DYLD_', 'BASH_FUNC_']
 
 /** Proxy names the Harness-home `.env` may set in any letter case: proxy clients read both spellings. */
 const HOME_LAYER_PROXY_NAMES = new Set(['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY'])

@@ -478,7 +478,7 @@ describe('web-app runtime glue', () => {
 
   it('scrubs the helper environment and reports helper spawn or exit failures', async () => {
     vi.stubEnv('DEEPSEEK_API_KEY', 'must-not-reach-browser')
-    vi.stubEnv('DSH_HOME', '/must-not-reach-browser')
+    vi.stubEnv('INKSTONE_HOME', '/must-not-reach-browser')
     const completed = launcher()
     vi.mocked(spawn).mockReturnValueOnce(completed)
     const completion = originalOpenBrowser('http://127.0.0.1:4567')

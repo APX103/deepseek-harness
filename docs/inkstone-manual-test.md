@@ -84,7 +84,7 @@ pnpm dev:desktop        # 首次较慢；= pnpm --filter @deepseek-ai/dsh-deskto
 
 ## 4. 配置覆盖（按需）
 
-profile 配置在 `~/.dsh/profiles/<profile>/cordis.patch.yml`（可用 `DSH_HOME`
+profile 配置在 `~/.inkstone/profiles/<profile>/cordis.patch.yml`（可用 `DSH_HOME`
 重定向根）。给路由换端点或指定真实 chat：
 
 ```yaml

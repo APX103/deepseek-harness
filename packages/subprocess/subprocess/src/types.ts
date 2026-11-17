@@ -13,7 +13,11 @@ import type { Duplex, Readable, Writable } from 'node:stream'
 export const DSH_ENV_PREFIX = 'DSH_' as const
 
 /** One environment key inside the managed {@link DSH_ENV_PREFIX} namespace. */
-export type DshEnvironmentKey = `${typeof DSH_ENV_PREFIX}${string}`
+/**
+ * The trusted shell-variable namespace: upstream `DSH_*` keys plus the fork's
+ * `INKSTONE_*` home override (coexistence isolation, KEP-0002 D9).
+ */
+export type DshEnvironmentKey = `${typeof DSH_ENV_PREFIX}${string}` | `INKSTONE_${string}`
 
 /** Trusted DeepSeek Harness variables for one child-process execution. */
 export type DshEnvironment = Readonly<Record<DshEnvironmentKey, string>>

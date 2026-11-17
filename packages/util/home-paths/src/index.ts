@@ -8,23 +8,30 @@ import { opendir, realpath } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 
-/** Directory name for the default DeepSeek Harness home under the OS home. */
-export const DSH_HOME_DIR_NAME = '.dsh'
+/**
+ * Directory name for the default Inkstone home under the OS home. Deliberately
+ * distinct from upstream's `~/.dsh` so both products coexist on one machine
+ * (sessions, credentials, and profiles never overlap).
+ */
+export const DSH_HOME_DIR_NAME = '.inkstone'
 
 /** Stable user-facing display form for the default DeepSeek Harness home. */
 export const DEFAULT_DSH_HOME_DISPLAY = `~/${DSH_HOME_DIR_NAME}`
 
 /** Environment variable that overrides the default DeepSeek Harness home. */
-export const DSH_HOME_ENV = 'DSH_HOME'
+export const DSH_HOME_ENV = 'INKSTONE_HOME'
 
-/** Directory name for the default shared agent configuration root under the OS home. */
-export const AGENTS_HOME_DIR_NAME = '.agents'
+/**
+ * Directory name for the default shared agent configuration root. Also
+ * namespaced away from upstream's `~/.agents` for coexistence.
+ */
+export const AGENTS_HOME_DIR_NAME = '.inkstone-agents'
 
 /** Stable user-facing display form for the default shared agent configuration root. */
 export const DEFAULT_AGENTS_HOME_DISPLAY = `~/${AGENTS_HOME_DIR_NAME}`
 
 /** Environment variable that overrides the default shared agent configuration root. */
-export const AGENTS_HOME_ENV = 'DSH_AGENTS_HOME'
+export const AGENTS_HOME_ENV = 'INKSTONE_AGENTS_HOME'
 
 /**
  * Give a native filesystem watcher one canonical spelling of a path, even
@@ -124,12 +131,12 @@ function rootDisplay(resolvedRoot: string, defaultRoot: string, defaultLabel: st
 /**
  * Resolve the single-root DeepSeek Harness home.
  *
- * Precedence, highest first: an explicit configured path, `$DSH_HOME`, then
- * `~/.dsh`. The harness keeps all user data under one root. An empty or
- * whitespace-only `$DSH_HOME` is treated as unset, so a blank override never
+ * Precedence, highest first: an explicit configured path, `$INKSTONE_HOME`, then
+ * `~/.inkstone`. The harness keeps all user data under one root. An empty or
+ * whitespace-only `$INKSTONE_HOME` is treated as unset, so a blank override never
  * resolves the home to the current working directory.
  * @param configured - explicit harness-home override, which has highest precedence.
- * @param env - environment mapping used to read `DSH_HOME`.
+ * @param env - environment mapping used to read `INKSTONE_HOME`.
  * @returns the normalized absolute harness home path.
  */
 export function resolveDshHome(configured?: string, env: Record<string, string | undefined> = process.env): string {
