@@ -71,5 +71,9 @@ export interface WelcomeAuthentication {
  * @returns true only when neither authentication route is configured.
  */
 export function needsWelcome(authentication: WelcomeAuthentication): boolean {
-  return !authentication.loggedIn && !authentication.hasApiKey
+  void authentication
+  // D10 (KEP-0002, 2026-11-17): the DeepSeek first-run welcome never runs in
+  // this fork — sign-in is the Inkstone gate inside the app, and the welcome
+  // flow is upstream's onboarding.
+  return false
 }

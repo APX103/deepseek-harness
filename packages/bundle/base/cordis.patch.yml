@@ -121,8 +121,11 @@
     - id: authorization
       name: '@deepseek-ai/dsh-authorization'
 
+    # D10 (KEP-0002, 2026-11-17): the DeepSeek account service stays off —
+    # sign-in is Inkstone's own (ui-inkstone-account in the web bundle).
     - id: deepseek-account
       name: '@deepseek-ai/dsh-deepseek-account'
+      disabled: true
       config:
         desktopPlatform: !!js "ctx.get('profileContext')?.name === 'desktop' && ['darwin', 'win32'].includes(process.platform) ? process.platform : null"
 

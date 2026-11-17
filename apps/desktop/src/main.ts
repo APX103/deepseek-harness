@@ -1454,7 +1454,15 @@ async function main(): Promise<void> {
   }
   const openInitialWindow = async (): Promise<void> => {
     if (quitting || recovery.active) return
-    const state = await readWelcomeState()
+    // D10: the welcome read is best-effort startup metadata (locale/theme);
+    // a failed first RPC during host warm-up must not kill the boot.
+    const state = await readWelcomeState().catch(() => ({
+      loggedIn: false,
+      hasApiKey: false,
+      writable: false,
+      localePreference: null,
+      themePreference: 'system' as const,
+    }))
     if (isQuitting() || backend.state.phase !== 'ready') return
     nativeTheme.themeSource = state.themePreference
     locale = resolveDesktopStartupLocale(state.localePreference, systemLanguages)
@@ -1485,10 +1493,10 @@ async function main(): Promise<void> {
     window.focus()
   }
 
-  if (app.isPackaged || process.env.DSH_DESKTOP_DEV_APP === '1') app.setAsDefaultProtocolClient('dsh')
+  if (app.isPackaged || process.env.DSH_DESKTOP_DEV_APP === '1') app.setAsDefaultProtocolClient('inkstone')
   app.on('open-url', (event, url) => {
     event.preventDefault()
-    if (url === 'dsh://open' || url === 'dsh://open/') focusPrimaryWindow()
+    if (url === 'inkstone://open' || url === 'inkstone://open/') focusPrimaryWindow()
   })
 
   app.on('activate', (_event, hasVisibleWindows) => {

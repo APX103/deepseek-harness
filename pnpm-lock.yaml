@@ -3046,6 +3046,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-goal':
         specifier: workspace:*
         version: link:../../client/ui-goal
+      '@deepseek-ai/dsh-client-ui-inkstone-account':
+        specifier: workspace:*
+        version: link:../../client/ui-inkstone-account
       '@deepseek-ai/dsh-client-ui-input-trigger':
         specifier: workspace:*
         version: link:../../client/ui-input-trigger
@@ -4785,6 +4788,22 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
+
+  packages/client/ui-inkstone-account:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-host-webserver':
+        specifier: workspace:*
+        version: link:../../host/webserver
+      '@deepseek-ai/dsh-inkstone-account':
+        specifier: workspace:*
+        version: link:../../credentials/inkstone-account
 
   packages/client/ui-input-trigger:
     devDependencies:

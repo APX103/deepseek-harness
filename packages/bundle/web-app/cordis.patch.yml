@@ -135,13 +135,20 @@
     - id: schedule
       name: '@deepseek-ai/dsh-schedule'
 
-    # Configuration-surface reads and writes over Typert Remote. Each method
-    # reports an actionable error when its settings-domain provider is absent.
+    # D10 (KEP-0002, 2026-11-17): the DeepSeek account surfaces stay off —
+    # sign-in is Inkstone's own, served by the row below.
     - id: ui-settings-account
       name: '@deepseek-ai/dsh-client-ui-settings-account'
+      disabled: true
 
     - id: ui-account-notifications
       name: '@deepseek-ai/dsh-client-ui-account-notifications'
+      disabled: true
+
+    # The Inkstone (端砚) sign-in surface: loopback session endpoint plus the
+    # branded login gate over inkstone-account.
+    - id: ui-inkstone-account
+      name: '@deepseek-ai/dsh-client-ui-inkstone-account'
 
     - id: settings-controller
       name: '@deepseek-ai/dsh-api-settings-controller'
@@ -185,7 +192,7 @@
       inject: [webStartup]
       config:
         host: !!js ctx.webStartup.host ?? '127.0.0.1'
-        port: !!js ctx.webStartup.port ?? 3080
+        port: !!js ctx.webStartup.port ?? 3180
         tls: !!js ctx.webStartup.tls
         compression: gzip
         compressionLevel: 1

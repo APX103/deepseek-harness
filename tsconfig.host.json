@@ -486,6 +486,7 @@
     { "path": "./packages/ptc-runtime/ptc-runtime" },
     { "path": "./packages/experimental/ptc-runtime-python" },
     { "path": "./packages/ptc-runtime/ptc-runtime-node" },
+    { "path": "./packages/client/ui-inkstone-account/tsconfig.host.json" },
     { "path": "./packages/credentials/inkstone-account" },
     { "path": "./packages/inkstone/token-plan" },
     { "path": "./packages/llm/llm-deepseek" },
