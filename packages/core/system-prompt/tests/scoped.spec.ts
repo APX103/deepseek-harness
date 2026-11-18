@@ -43,6 +43,19 @@ describe('scoped sections', () => {
     expect(global).not.toContain('You run tests.')
   })
 
+  it('a scoped harness:identity shadows the configured identity for that scope only', async () => {
+    const ctx = await mount({ identity: 'Configured identity.' })
+    const scope = await mintScope(ctx, 'child')
+    scope.ctx.systemPrompt.section({ name: 'harness:identity', order: -1000, text: 'Scoped identity.' })
+
+    const scoped = renderPrompt(await ctx.systemPrompt.assemble({ scope: scopeKeyOf(scope) }))
+    const global = renderPrompt(await ctx.systemPrompt.assemble())
+    expect(scoped).toContain('Scoped identity.')
+    expect(scoped).not.toContain('Configured identity.')
+    expect(global).toContain('Configured identity.')
+    expect(global).not.toContain('Scoped identity.')
+  })
+
   it('scoped-only sections join that scope alone; disposal removes them', async () => {
     const ctx = await mount()
     const scope = await mintScope(ctx, 'child')

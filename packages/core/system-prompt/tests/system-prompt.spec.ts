@@ -239,6 +239,13 @@ describe('SystemPrompt', () => {
       expect(renderPrompt(await ctx.systemPrompt.assemble())).toBe(IDENTITY)
     })
 
+    it('renders a configured identity instead of the default', async () => {
+      const ctx = new Context()
+      await ctx.plugin(SystemPrompt, { identity: 'You are 端砚 Inkstone, an AI agent by Shanghai AI Laboratory (上海人工智能实验室).' })
+      expect(renderPrompt(await ctx.systemPrompt.assemble()))
+        .toBe('You are 端砚 Inkstone, an AI agent by Shanghai AI Laboratory (上海人工智能实验室).')
+    })
+
     it('can omit the harness identity for a deployment that owns the complete persona', async () => {
       const ctx = new Context()
       await ctx.plugin(SystemPrompt, {

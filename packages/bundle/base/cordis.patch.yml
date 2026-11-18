@@ -530,6 +530,9 @@
       name: '@deepseek-ai/dsh-system-prompt'
       config:
         personaPrefix: ''
+        # KEP-0002: the product is branded 端砚 Inkstone; the model identity
+        # is a deployment choice like the persona, not a package constant.
+        identity: 'You are 端砚 Inkstone, an AI agent by Shanghai AI Laboratory (上海人工智能实验室).'
 
     # Agents created at startup. The base stays empty; raw overlays may create
     # agents, while Web creates sessions on client request.

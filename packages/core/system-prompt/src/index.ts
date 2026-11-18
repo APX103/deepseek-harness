@@ -133,6 +133,9 @@ export interface PromptAssembly extends PromptPresentation {
   tools: ToolSchema[]
 }
 
+/** Default model identity when a deployment configures none. */
+const DEFAULT_IDENTITY = 'You are an AI agent powered by DeepSeek Harness.'
+
 const SECTION_ORDERS = {
   HARNESS_IDENTITY: -1000,
   DEPLOYMENT_PERSONA_PREFIX: 0,
@@ -263,7 +266,13 @@ function compareToolNames(a: ToolSchema, b: ToolSchema): number {
 
 /** Plugin config: the deployment-authored fragment of the system prompt (see {@link Config.personaPrefix} for its contract). */
 export interface Config {
-  /** Include the fixed DeepSeek Harness identity before the deployment persona (default true). */
+  /**
+   * Fixed identity line opening the system prompt, before the deployment persona.
+   * A scoped section named `harness:identity` shadows it; the default is the
+   * DeepSeek Harness identity. A composition rebrands the agent here.
+   */
+  identity?: string
+  /** Include the fixed identity line before the deployment persona (default true). */
   includeHarnessIdentity?: boolean
   /** Include optional runtime-context snapshots in model history (default true); required context remains. */
   includeRuntimeContext?: boolean
@@ -435,6 +444,7 @@ class PromptLayer implements ScopeLayer {
 /** Registry service for the prompt inputs assembled before each model step. */
 export class SystemPrompt extends Service {
   static Config: z<Config> = z.object({
+    identity: z.string().default(DEFAULT_IDENTITY),
     includeHarnessIdentity: z.boolean().default(true),
     includeRuntimeContext: z.boolean().default(true),
     personaPrefix: z.string().default(''),
@@ -457,7 +467,7 @@ export class SystemPrompt extends Service {
       this.section({
         name: 'harness:identity',
         order: this.getSectionOrder('HARNESS_IDENTITY'),
-        text: 'You are an AI agent powered by DeepSeek Harness.',
+        text: config.identity ?? DEFAULT_IDENTITY,
       })
     }
     this.section({
