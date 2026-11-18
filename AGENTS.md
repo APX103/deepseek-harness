@@ -88,6 +88,22 @@ pnpm run clean           # remove build outputs and safe residue from deleted pa
 pnpm run test           # unit tests
 pnpm run test:coverage  # CI coverage gate: per-file 100% on packages/*/*/src
 pnpm run test:e2e       # real-API tests; self-skip without DEEPSEEK_API_KEY
+```
+
+## Upstream sync strategy (Inkstone branch)
+
+`ours/provider` tracks `upstream/master` (deepseek-ai/deepseek-harness) by **merge-forward only — never rebase**. "同步上游" runs this sequence; it is safe to repeat until a step fails, at which point stop and report instead of improvising:
+
+1. `git fetch upstream && git branch backup/pre-upstream-sync-$(date +%Y%m%d)` — a local backup branch before every sync.
+2. `git merge upstream/master --no-edit`. Conflict principles:
+   - Rows we `disabled:` in bundle patches are config-off, not code-off — upstream edits to those plugins never resurrect them; take upstream's side for their internals.
+   - When upstream deletes or rewrites machinery one of our tests covered (for example the browser-launcher env scrub moved to `dsh-subprocess`), drop the obsolete test and re-assert the same semantic at its new owner rather than resurrecting the old test.
+   - The skill directory rename (`skills/dsh-doc` → `skills/inkstone-doc`) is rename-detected; new upstream files land in the renamed directory, and `SKILL.md`'s read-next table must list them.
+3. `pnpm install` — never hand-merge `pnpm-lock.yaml`; regenerate it.
+4. Bilingual docs touched by either side must merge bilingual: write or update the counterpart, then `pnpm run verify-translation-pairing --write <doc>` for each pair (code blocks must match verbatim). `keps/` is git-excluded local-mode design logs and stays out of pairing scope.
+5. Gates, in order: `pnpm run verify-translation-pairing` (repo-wide), `pnpm run build` (all 10 gates), then `pnpm exec vitest run` over every package the merge touched. Known pre-existing debt (not sync regressions): `ui-settings-account` and `ui-account-notifications` suites fail on a clean tree too.
+6. Restart the desktop app and verify the Inkstone surfaces end to end (`/session` returns authenticated, no SSO popup at boot, Models page panel renders).
+7. Push `ours/provider`. The backup branch stays local until the next successful sync.
 pnpm run test:expected  # owner-local process expectations
 pnpm run test:snapshot  # keyless recorded-session replay through shipped profiles; filter: -t <name>
 pnpm run test:snapshot:record  # re-record expected outputs (needs key)
