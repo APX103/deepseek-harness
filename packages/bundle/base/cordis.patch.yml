@@ -132,12 +132,14 @@
     - id: credentials
       name: '@deepseek-ai/dsh-credentials-local'
 
-    # D8 (KEP-0002, 2026-11-17): platform-only — users cannot configure their
-    # own providers, so the pi-ai multi-provider twin stays off and the Models
-    # page offers no custom-gateway profiles.
+    # D8 disabled this row for a platform-only composition; KEP-0006
+    # (2026-11-18) reverses that: users may add custom gateways beside the
+    # Inkstone route. The adapter starts route-less and activates when user
+    # settings add one, so the shipped default experience is unchanged.
     - id: llm-pi-ai
       name: '@deepseek-ai/dsh-llm-pi-ai'
-      disabled: true
+      config:
+        providers: {}
 
     - id: session-persistence-jsonl
       name: '@deepseek-ai/dsh-session-persistence-jsonl'

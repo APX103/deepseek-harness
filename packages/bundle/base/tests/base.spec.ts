@@ -89,3 +89,29 @@ describe('dsh-base bundle', () => {
     expect(existsSync(resolve(root, 'windows.cordis.patch.yml'))).toBe(false)
   })
 })
+
+describe('custom providers (KEP-0006)', () => {
+  const rows = (): { id?: string; config?: Record<string, unknown>; disabled?: boolean }[] => {
+    const root = fileURLToPath(new URL('..', import.meta.url))
+    const parsed = yaml.load(
+      readFileSync(resolve(root, 'cordis.patch.yml'), 'utf8'),
+      { schema: entryListSchema },
+    )
+    return (parsed as { insert?: { id?: string; config?: Record<string, unknown>; disabled?: boolean }[] }[]).flatMap(
+      patch => patch.insert ?? [],
+    )
+  }
+
+  it('enables the pi-ai adapter route-less beside the inkstone route', () => {
+    const found = rows().find(row => row.id === 'llm-pi-ai')
+    expect(found?.disabled).toBeUndefined()
+    expect(found?.config?.['providers']).toEqual({})
+    const inkstone = rows().find(row => row.id === 'llm-inkstone')
+    expect(inkstone?.disabled).toBeUndefined()
+  })
+
+  it('keeps the DeepSeek-official API surfaces off', () => {
+    expect(rows().find(row => row.id === 'deepseek-llm-api-extensions')?.disabled).toBe(true)
+    expect(rows().find(row => row.id === 'llm-deepseek')?.disabled).toBe(true)
+  })
+})
