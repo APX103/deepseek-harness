@@ -112,3 +112,85 @@ describe('inkstone token plan client', () => {
     expect(JSON.parse(applyBody ?? '{}')).toEqual({ scenario_id: 's1', reason: '需要更多' })
   })
 })
+
+describe('transactions and packages', () => {
+  const txEnvelope = {
+    total: 14,
+    items: [
+      {
+        occurred_at: '2026-11-18',
+        income_expense_type: 'consume',
+        income_expense_type_name: '消费',
+        income_expense_type_name_en: 'Usage',
+        consume_channel: 'chat',
+        consume_channel_name: '对话消费',
+        consume_channel_name_en: 'Chat usage',
+        credit_delta: '-1.673',
+        remark: 'TokenPlan模型调用-GLM-5.3-3rd',
+        remark_en: 'TokenPlan model call-GLM-5.3-3rd',
+        pkg_id: '',
+        model: 'glm-5.3-3rd',
+        request_count: 2,
+      },
+      { occurred_at: 'bad-row' },
+    ],
+  }
+  const pkgEnvelope = {
+    total: 1,
+    packages: [
+      {
+        pkg_id: 'pkg_free_monthly_base',
+        issued_at: '2026-11-03 20:00:41',
+        cycle_type: 'monthly',
+        current_cycle: { start_at: '2026-11-03 20:00:41', end_at: '2026-12-04 00:00:00' },
+        total_credits: '10000.000',
+        remaining_credits: '9790.210',
+        status: 'available',
+        income_expense_type: 'platform_grant',
+        income_expense_type_name: '平台发放',
+        remark: '每月免费基础包',
+        effective_at: '2026-11-03 20:00:41',
+        expire_at: '2099-12-31 23:59:59',
+      },
+    ],
+  }
+
+  it('parses one ledger page and drops malformed rows', async () => {
+    const ledger = route(() => ok(txEnvelope))
+    const page = await new TokenPlanClient({ config, fetch: ledger.fetchImpl }).transactions('jwt', '2026-11-01', '2026-11-18', 1)
+    expect(page.total).toBe(14)
+    expect(page.items).toEqual([{
+      occurredAt: '2026-11-18',
+      typeName: '消费',
+      channelName: '对话消费',
+      creditDelta: -1.673,
+      remark: 'TokenPlan模型调用-GLM-5.3-3rd',
+      model: 'glm-5.3-3rd',
+    }])
+  })
+
+  it('parses 墨点包 grants with their cycle windows', async () => {
+    const grants = route(() => ok(pkgEnvelope))
+    const packages = await new TokenPlanClient({ config, fetch: grants.fetchImpl }).packages('jwt')
+    expect(packages).toEqual([{
+      pkgId: 'pkg_free_monthly_base',
+      cycleType: 'monthly',
+      cycleStart: '2026-11-03 20:00:41',
+      cycleEnd: '2026-12-04 00:00:00',
+      totalCredits: 10000,
+      remainingCredits: 9790.21,
+      status: 'available',
+      kindName: '平台发放',
+      remark: '每月免费基础包',
+      expireAt: '2099-12-31 23:59:59',
+    }])
+  })
+
+  it('returns empty pages on malformed envelopes', async () => {
+    const bad = route(() => ok({ items: 'nope', total: 'NaN' }))
+    await expect(new TokenPlanClient({ config, fetch: bad.fetchImpl }).transactions('jwt', 'a', 'b', 1))
+      .resolves.toEqual({ total: 0, items: [] })
+    const noPackages = route(() => ok({ packages: null }))
+    await expect(new TokenPlanClient({ config, fetch: noPackages.fetchImpl }).packages('jwt')).resolves.toEqual([])
+  })
+})

@@ -77,7 +77,8 @@ async function handleSessionRequest(
   const url = new URL(request.url ?? '/', 'http://127.0.0.1')
   const prefix = `/${pathToken}`
   const route = url.pathname.startsWith(prefix) ? url.pathname.slice(prefix.length) : undefined
-  if (route !== '/session' && route !== '/session/sso' && route !== '/session/code' && route !== '/session/balance') {
+  if (route !== '/session' && route !== '/session/sso' && route !== '/session/code' && route !== '/session/balance'
+    && route !== '/session/plan/transactions' && route !== '/session/plan/packages' && route !== '/session/plan/applications') {
     response.writeHead(404, { 'content-type': 'application/json' }).end('{"error":"not found"}')
     return
   }
@@ -121,6 +122,46 @@ async function handleSessionRequest(
         effectiveCredits: balance.effectiveCredits,
         windows: balance.windows,
       }))
+      return
+    }
+    if (route === '/session/plan/transactions') {
+      if (request.method !== 'GET') throw new MethodNotAllowed(request.method)
+      const plan = ctx.get('inkstoneTokenPlan')
+      if (plan === undefined) {
+        response.writeHead(404, { 'content-type': 'application/json' }).end('{"error":"not found"}')
+        return
+      }
+      const start = url.searchParams.get('start') ?? ''
+      const end = url.searchParams.get('end') ?? ''
+      const page = Math.max(1, Number(url.searchParams.get('page')) || 1)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+        response.writeHead(400, { 'content-type': 'application/json' }).end('{"code":"BAD_REQUEST","message":"start 和 end 必须是 YYYY-MM-DD"}')
+        return
+      }
+      const ledger = await plan.transactions(start, end, page)
+      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(ledger))
+      return
+    }
+    if (route === '/session/plan/packages') {
+      if (request.method !== 'GET') throw new MethodNotAllowed(request.method)
+      const plan = ctx.get('inkstoneTokenPlan')
+      if (plan === undefined) {
+        response.writeHead(404, { 'content-type': 'application/json' }).end('{"error":"not found"}')
+        return
+      }
+      const packages = await plan.packages()
+      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ packages }))
+      return
+    }
+    if (route === '/session/plan/applications') {
+      if (request.method !== 'GET') throw new MethodNotAllowed(request.method)
+      const plan = ctx.get('inkstoneTokenPlan')
+      if (plan === undefined) {
+        response.writeHead(404, { 'content-type': 'application/json' }).end('{"error":"not found"}')
+        return
+      }
+      const applications = await plan.creditIncreaseApplications()
+      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ applications }))
       return
     }
     if (request.method === 'GET') {

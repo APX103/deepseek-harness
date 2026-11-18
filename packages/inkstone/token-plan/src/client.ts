@@ -44,6 +44,36 @@ export interface FreeGrantOutcome {
   readonly hasReceived: boolean
 }
 
+/** One 收支 ledger row from `/tokenplan/v1/credits/transactions`. */
+export interface TokenPlanTransaction {
+  readonly occurredAt: string
+  readonly typeName: string
+  readonly channelName: string
+  readonly creditDelta: number
+  readonly remark: string
+  readonly model: string
+}
+
+/** One page of 收支 ledger rows. */
+export interface TokenPlanTransactionPage {
+  readonly total: number
+  readonly items: readonly TokenPlanTransaction[]
+}
+
+/** One 墨点包 from `/tokenplan/v1/credits/packages`. */
+export interface TokenPlanPackage {
+  readonly pkgId: string
+  readonly cycleType: string
+  readonly cycleStart: string
+  readonly cycleEnd: string
+  readonly totalCredits: number
+  readonly remainingCredits: number
+  readonly status: string
+  readonly kindName: string
+  readonly remark: string
+  readonly expireAt: string
+}
+
 /** One credit-increase scenario category. */
 export interface CreditIncreaseScenario {
   readonly id: string
@@ -136,6 +166,74 @@ export class TokenPlanClient {
           appliedAt: boundedText(record['created_at'] ?? record['appliedAt'], 60),
         },
       ]
+    })
+  }
+
+  /**
+   * One page of the 收支 ledger. `startDate`/`endDate` are required by the
+   * platform (`YYYY-MM-DD`); amounts arrive as JSON strings.
+   */
+  async transactions(
+    token: string,
+    startDate: string,
+    endDate: string,
+    page: number,
+    pageSize = 10,
+    signal?: AbortSignal,
+  ): Promise<TokenPlanTransactionPage> {
+    const query = `start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`
+      + `&income_expense_type=all&page=${page}&page_size=${pageSize}`
+    const data = await this.#get(`/tokenplan/v1/credits/transactions?${query}`, token, undefined, signal)
+    const items = fieldOf(data, 'items')
+    const total = Number(fieldOf(data, 'total'))
+    if (!Array.isArray(items)) return { total: Number.isFinite(total) ? total : 0, items: [] }
+    return {
+      total: Number.isFinite(total) ? total : 0,
+      items: items.flatMap((item): TokenPlanTransaction[] => {
+        if (item === null || typeof item !== 'object') return []
+        const record = item as Record<string, unknown>
+        const occurredAt = boundedText(record['occurred_at'], 20)
+        const delta = Number(record['credit_delta'])
+        if (occurredAt === '' || !Number.isFinite(delta)) return []
+        return [{
+          occurredAt,
+          typeName: boundedText(record['income_expense_type_name'], 40),
+          channelName: boundedText(record['consume_channel_name'], 40),
+          creditDelta: delta,
+          remark: boundedText(record['remark'], 200),
+          model: boundedText(record['model'], 120),
+        }]
+      }),
+    }
+  }
+
+  /** The account's 墨点包 grants with their cycle windows. */
+  async packages(token: string, signal?: AbortSignal): Promise<readonly TokenPlanPackage[]> {
+    const data = await this.#get('/tokenplan/v1/credits/packages', token, undefined, signal)
+    const rows = fieldOf(data, 'packages')
+    if (!Array.isArray(rows)) return []
+    return rows.flatMap((row): TokenPlanPackage[] => {
+      if (row === null || typeof row !== 'object') return []
+      const record = row as Record<string, unknown>
+      const pkgId = boundedText(record['pkg_id'], 120)
+      const total = Number(record['total_credits'])
+      const remaining = Number(record['remaining_credits'])
+      if (pkgId === '' || !Number.isFinite(total) || !Number.isFinite(remaining)) return []
+      const cycle = record['current_cycle'] !== null && typeof record['current_cycle'] === 'object'
+        ? record['current_cycle'] as Record<string, unknown>
+        : {}
+      return [{
+        pkgId,
+        cycleType: boundedText(record['cycle_type'], 40),
+        cycleStart: boundedText(cycle['start_at'], 40),
+        cycleEnd: boundedText(cycle['end_at'], 40),
+        totalCredits: total,
+        remainingCredits: remaining,
+        status: boundedText(record['status'], 40),
+        kindName: boundedText(record['income_expense_type_name'], 40),
+        remark: boundedText(record['remark'], 200),
+        expireAt: boundedText(record['expire_at'], 40),
+      }]
     })
   }
 

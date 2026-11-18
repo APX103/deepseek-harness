@@ -413,7 +413,10 @@ function Loaded({ injected, renderSlot }: { injected: ModelsSectionFace; renderS
   return (
     <div className={styles['section']}>
       <h2 className={styles['title']}>{t('title')}</h2>
-      <p className={styles['intro']}>{t('intro')}</p>
+      {/* The API-key pitch only makes sense while the directory offers
+      configurable providers; a composition with none (login-gated routes
+      only) renders no intro at all. */}
+      {state.rows.length > 0 ? <p className={styles['intro']}>{t('intro')}</p> : null}
       {!state.writable && state.status === 'ready' ? <p className={styles['notice']}>{t('readOnly')}</p> : null}
       {savedIdentity === undefined
         ? null

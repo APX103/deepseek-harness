@@ -22,6 +22,9 @@ export type {
   TokenPlanBalance,
   TokenPlanClientDeps,
   TokenPlanFetch,
+  TokenPlanPackage,
+  TokenPlanTransaction,
+  TokenPlanTransactionPage,
 } from './client.ts'
 export { formatInkstoneCredits } from './format.ts'
 export { InkstoneTokenPlan } from './service.ts'

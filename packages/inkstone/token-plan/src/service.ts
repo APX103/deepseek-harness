@@ -14,6 +14,8 @@ import type {
   FreeGrantOutcome,
   TokenPlanBalance,
   TokenPlanFetch,
+  TokenPlanPackage,
+  TokenPlanTransactionPage,
 } from './client.ts'
 import { TokenPlanError } from './errors.ts'
 
@@ -95,6 +97,22 @@ export class InkstoneTokenPlan extends Service {
   /** The selectable credit-increase scenario tree. */
   async creditIncreaseScenarios(signal?: AbortSignal): Promise<readonly CreditIncreaseScenario[]> {
     return this.client.creditIncreaseScenarios(await this.token(), signal)
+  }
+
+  /** One page of the 收支 ledger for a date range. */
+  async transactions(
+    startDate: string,
+    endDate: string,
+    page: number,
+    pageSize?: number,
+    signal?: AbortSignal,
+  ): Promise<TokenPlanTransactionPage> {
+    return this.client.transactions(await this.token(), startDate, endDate, page, pageSize, signal)
+  }
+
+  /** The account's 墨点包 grants with their cycle windows. */
+  async packages(signal?: AbortSignal): Promise<readonly TokenPlanPackage[]> {
+    return this.client.packages(await this.token(), signal)
   }
 
   /** The account's submitted credit-increase applications. */

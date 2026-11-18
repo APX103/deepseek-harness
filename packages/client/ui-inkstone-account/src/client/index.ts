@@ -19,8 +19,9 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import { inkstoneAccountGlobal } from '../global.ts'
 import { createInkstoneAccountSource } from './account-source.ts'
 import { createInkstoneBalanceSource } from './balance-source.ts'
-import { InkstoneBalance } from './InkstoneBalance.tsx'
-import type { InkstoneBalanceFace } from './InkstoneBalance.tsx'
+import { fetchApplications, fetchLedger, fetchPackages } from './plan-source.ts'
+import { InkstonePlanPanel } from './InkstonePlanPanel.tsx'
+import type { InkstonePlanFace } from './InkstonePlanPanel.tsx'
 import { InkstoneBrandMark, InkstoneBrandName } from './InkstoneBrand.tsx'
 import { InkstoneHeroMark } from './InkstoneHeroMark.tsx'
 import { InkstoneLauncher } from './InkstoneLauncher.tsx'
@@ -28,8 +29,9 @@ import type { InkstoneLauncherFace } from './InkstoneLauncher.tsx'
 import { en, zh, NS } from './locales.ts'
 
 export type { InkstoneAccountSnapshot, InkstoneAccountSource } from './account-source.ts'
-export type { InkstoneBalanceSource } from './balance-source.ts'
-export type { InkstoneBalanceFace, InkstoneBalanceProps } from './InkstoneBalance.tsx'
+export type { InkstoneBalanceSnapshot, InkstoneBalanceSource } from './balance-source.ts'
+export type { InkstonePlanFace, InkstonePlanProps } from './InkstonePlanPanel.tsx'
+export type { InkstoneApplicationRow, InkstoneLedgerPage, InkstoneLedgerRow, InkstonePackageRow } from './plan-source.ts'
 export type { InkstoneBrandNameProps } from './InkstoneBrand.tsx'
 export type { InkstoneLauncherFace, InkstoneLauncherProps } from './InkstoneLauncher.tsx'
 export type { InkstoneKey } from './locales.ts'
@@ -83,10 +85,15 @@ export async function apply(ctx: ClientContext): Promise<() => Promise<void>> {
   }, InkstoneLauncher)), 'inkstone-account: launcher')
   ctx.effect(() => ctx.slots.inject('settings.models.footer', () => ctx.slots.register({
     name: 'settings.models.footer',
-    id: 'inkstone-balance',
+    id: 'inkstone-plan',
     locale: NS,
-    inject: (): InkstoneBalanceFace => ({ hooks: { balance } }),
-  }, InkstoneBalance)), 'inkstone-account: balance')
+    inject: (): InkstonePlanFace => ({
+      hooks: { balance },
+      fetchLedger: (start, end, page) => fetchLedger(endpoint.baseUrl, start, end, page),
+      fetchPackages: () => fetchPackages(endpoint.baseUrl),
+      fetchApplications: () => fetchApplications(endpoint.baseUrl),
+    }),
+  }, InkstonePlanPanel)), 'inkstone-account: plan panel')
   if (session.authenticated === true) return () => Promise.resolve()
   gate = mountGate(endpoint.registerUrl)
   return () => {

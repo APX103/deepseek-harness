@@ -9,14 +9,15 @@
     "src/client/index.ts",
     "src/client/account-source.ts",
     "src/client/balance-source.ts",
-    "src/client/InkstoneBalance.tsx",
     "src/client/InkstoneBrand.tsx",
     "src/client/InkstoneLauncher.tsx",
     "src/client/locales.ts",
     "src/css-modules.d.ts",
     "src/global.ts",
     "src/client/InkstoneHeroMark.tsx",
-    "src/client/InkstoneMark.tsx"
+    "src/client/InkstoneMark.tsx",
+    "src/client/InkstonePlanPanel.tsx",
+    "src/client/plan-source.ts"
   ],
   "references": [
     {

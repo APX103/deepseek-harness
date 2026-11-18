@@ -1,4 +1,0 @@
-.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 2px; font-size: 13px; color: var(--dsw-alias-label-secondary); }
-.label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.value { font-variant-numeric: tabular-nums; color: var(--dsw-alias-label-primary); }
-.window { color: var(--dsw-alias-label-tertiary); font-size: 12px; }
