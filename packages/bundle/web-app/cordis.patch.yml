@@ -16,6 +16,9 @@
 
 - id: system-prompt
   config:
+    # A patch replaces the row's whole config; the base layer's `identity`
+    # (KEP-0002) restates here or the web/desktop composition loses it.
+    identity: 'You are 端砚 Inkstone, an AI agent by Shanghai AI Laboratory (上海人工智能实验室).'
     personaPrefix: >-
       You are a coding agent powered by the {{model}} model.
 
