@@ -14,7 +14,9 @@
     "src/client/InkstoneLauncher.tsx",
     "src/client/locales.ts",
     "src/css-modules.d.ts",
-    "src/global.ts"
+    "src/global.ts",
+    "src/client/InkstoneHeroMark.tsx",
+    "src/client/InkstoneMark.tsx"
   ],
   "references": [
     {
@@ -43,6 +45,9 @@
     },
     {
       "path": "../../credentials/inkstone-account"
+    },
+    {
+      "path": "../ui-conversation/tsconfig.client.json"
     }
   ]
 }

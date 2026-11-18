@@ -22,6 +22,7 @@ import { createInkstoneBalanceSource } from './balance-source.ts'
 import { InkstoneBalance } from './InkstoneBalance.tsx'
 import type { InkstoneBalanceFace } from './InkstoneBalance.tsx'
 import { InkstoneBrandMark, InkstoneBrandName } from './InkstoneBrand.tsx'
+import { InkstoneHeroMark } from './InkstoneHeroMark.tsx'
 import { InkstoneLauncher } from './InkstoneLauncher.tsx'
 import type { InkstoneLauncherFace } from './InkstoneLauncher.tsx'
 import { en, zh, NS } from './locales.ts'
@@ -56,11 +57,15 @@ export async function apply(ctx: ClientContext): Promise<() => Promise<void>> {
   const source = createInkstoneAccountSource(endpoint.baseUrl)
   const balance = createInkstoneBalanceSource(endpoint.baseUrl)
   let gate: (() => void) | undefined
-  // The Inkstone composition replaces the local-build fallback brand.
+  // The Inkstone composition replaces the local-build fallback brand and the
+  // blank-home fallback whale.
   ctx.effect(() => ctx.slots.inject('sidebar.brand.mark', () => ctx.slots.inject('sidebar.brand.name', function* () {
     yield ctx.slots.register({ name: 'sidebar.brand.mark', locale: NS }, InkstoneBrandMark)
     yield ctx.slots.register({ name: 'sidebar.brand.name', locale: NS }, InkstoneBrandName)
   })), 'inkstone-account: brand')
+  ctx.effect(() => ctx.slots.inject('conversation.hero.brand.mark', () => ctx.slots.register({
+    name: 'conversation.hero.brand.mark',
+  }, InkstoneHeroMark)), 'inkstone-account: hero mark')
   ctx.effect(() => ctx.slots.inject('settings.launcher', () => ctx.slots.register({
     name: 'settings.launcher',
     locale: NS,

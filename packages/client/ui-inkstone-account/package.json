@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-inkstone-account",
-  "description": "Inkstone (端砚) sign-in surface: a local session endpoint over the inkstone-account service and a branded login gate for the web client (KEP-0002 D10)",
+  "description": "Inkstone (\u7aef\u781a) sign-in surface: a local session endpoint over the inkstone-account service and a branded login gate for the web client (KEP-0002 D10)",
   "version": "0.2.2-rc.2",
   "publishConfig": {
     "access": "public"
@@ -23,7 +23,8 @@
       "default": "./lib/client.js"
     },
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./assets/*": "./lib/assets/*"
   },
   "files": [
     "lib/index.js",
@@ -31,7 +32,8 @@
     "lib/types/**/*.d.ts",
     "lib/types/**/*.d.ts.map",
     "lib/**/*.js.map",
-    "src"
+    "src",
+    "lib/assets"
   ],
   "license": "MIT",
   "scripts": {
@@ -59,7 +61,8 @@
     "@deepseek-ai/dsh-host-webserver": "workspace:*",
     "@deepseek-ai/dsh-inkstone-account": "workspace:*",
     "@deepseek-ai/dsh-inkstone-token-plan": "workspace:*",
-    "react": "^18.2.0"
+    "react": "^18.2.0",
+    "@deepseek-ai/dsh-client-ui-conversation": "workspace:*"
   },
   "dsh": {
     "client": {

@@ -366,8 +366,11 @@
       name: '@deepseek-ai/dsh-client-ui-chat'
 
     # Official occupants for the sidebar brand slots and the home whale frame layer.
+    # D10 (KEP-0002): the home whale frame stays off the Inkstone surface —
+    # ui-inkstone-account owns the brand and hero seats.
     - id: ui-brand-official
       name: '@deepseek-ai/dsh-client-ui-brand-official'
+      disabled: true
 
     - id: ui-attachment
       name: '@deepseek-ai/dsh-client-ui-attachment'
