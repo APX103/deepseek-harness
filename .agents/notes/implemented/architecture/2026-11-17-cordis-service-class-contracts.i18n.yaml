@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for 2026-11-17-cordis-service-class-contracts.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-17-cordis-service-class-contracts.md
+/agent-note-cordis-service-classes-and-the-inkstone-gateway-wire-contract:
+  en: 0b28a0c1f04196a6
+  zh: c987e45388552c0d
+/agent-note-cordis-service-classes-and-the-inkstone-gateway-wire-contract/problem:
+  en: 0cf81f6546882b25
+  zh: e6feb39779222ff7
+/agent-note-cordis-service-classes-and-the-inkstone-gateway-wire-contract/decision:
+  en: 9d9232c0617cb41d
+  zh: e57d03e1729a1bb6
+/agent-note-cordis-service-classes-and-the-inkstone-gateway-wire-contract/alternatives-considered:
+  en: 2581390c88b95f10
+  zh: ea3ec946ea21eeac
+/agent-note-cordis-service-classes-and-the-inkstone-gateway-wire-contract/consequences:
+  en: 45068c84bbf9aaec
+  zh: 96f336eac2da55f5
