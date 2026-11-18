@@ -21,6 +21,8 @@ export interface InkstoneLauncherFace {
     /** 墨点 balance binding the renderer exposes as the `useBalance` hook. */
     readonly balance: InkstoneBalanceSource
   }
+  /** Fetch the 墨点 balance again; the menu calls this every time it opens. */
+  readonly refreshBalance: () => void
   /** Sign out of the Inkstone account and remount the login gate. */
   readonly signOut: () => Promise<void>
 }
@@ -32,7 +34,9 @@ export type InkstoneLauncherProps = PropsRuntime<'settings.launcher'> & PropsLoc
  * @param props - sidebar geometry, the account snapshot hook, sign-out, and locale copy.
  * @returns the Inkstone account launcher row.
  */
-export function InkstoneLauncher({ wide, openSettings, settingsShortcut, useAccount, useBalance, signOut, t }: InkstoneLauncherProps) {
+export function InkstoneLauncher({
+  wide, openSettings, settingsShortcut, useAccount, useBalance, refreshBalance, signOut, t,
+}: InkstoneLauncherProps) {
   const account = useAccount(state => state)
   const balance = useBalance(value => value)
   const bound = bindingWindow(balance)
@@ -64,7 +68,12 @@ export function InkstoneLauncher({ wide, openSettings, settingsShortcut, useAcco
             aria-label={t('menu.aria')}
             aria-haspopup="menu"
             aria-expanded={open}
-            onClick={() => { setOpen(value => !value) }}
+            onClick={() => {
+              setOpen((value) => {
+                if (!value) refreshBalance()
+                return !value
+              })
+            }}
           >
             <span className={css.avatar}>
               {signedIn && user?.avatar !== undefined && !avatarFailed

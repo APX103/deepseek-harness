@@ -25,6 +25,8 @@ export interface InkstoneBalanceSnapshot {
 export interface InkstoneBalanceSource {
   getSnapshot(): InkstoneBalanceSnapshot | undefined
   subscribe(listener: () => void): () => void
+  /** Fetch the balance again now; subscriptions alone refresh only at bind time. */
+  refresh(): void
 }
 
 /**
@@ -79,6 +81,7 @@ export function createInkstoneBalanceSource(baseUrl: string): InkstoneBalanceSou
       refresh()
       return () => { listeners.delete(listener) }
     },
+    refresh,
   }
 }
 

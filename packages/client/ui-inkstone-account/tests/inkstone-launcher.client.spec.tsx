@@ -15,8 +15,9 @@ function faceOf(snapshot: InkstoneAccountSnapshot, signOut = vi.fn(() => Promise
   return {
     hooks: {
       account: { getSnapshot: () => snapshot, subscribe: () => () => {}, markSignedOut: () => {} },
-      balance: { getSnapshot: () => balanceSnapshot, subscribe: () => () => {} },
+      balance: { getSnapshot: () => balanceSnapshot, subscribe: () => () => {}, refresh: () => {} },
     },
+    refreshBalance: vi.fn(),
     signOut,
   }
 }
@@ -75,6 +76,17 @@ it('qualifies the balance with the binding window when one caps spending', async
   fireEvent.click(screen.getByRole('button', { name: zh['menu.aria'] }))
   const item = await screen.findByRole('menuitem', { name: /600\.000/ })
   expect(item.textContent).toContain('（5h 窗口）')
+})
+
+it('refreshes the balance every time the menu opens', async () => {
+  const face = mount(signedIn)
+  const trigger = screen.getByRole('button', { name: zh['menu.aria'] })
+  fireEvent.click(trigger)
+  fireEvent.click(trigger)
+  expect(face.refreshBalance).toHaveBeenCalledTimes(1)
+  fireEvent.click(trigger)
+  fireEvent.click(trigger)
+  expect(face.refreshBalance).toHaveBeenCalledTimes(2)
 })
 
 it('renders the signed-out row without a sign-out action', async () => {

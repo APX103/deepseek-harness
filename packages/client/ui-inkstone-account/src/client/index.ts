@@ -66,6 +66,7 @@ export async function apply(ctx: ClientContext): Promise<() => Promise<void>> {
     locale: NS,
     inject: (): InkstoneLauncherFace => ({
       hooks: { account: source, balance },
+      refreshBalance: () => { balance.refresh() },
       signOut: async () => {
         await fetch(`${endpoint.baseUrl}/session`, { method: 'DELETE' })
         source.markSignedOut()
