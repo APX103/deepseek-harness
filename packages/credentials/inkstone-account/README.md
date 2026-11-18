@@ -1,5 +1,7 @@
 # @deepseek-ai/dsh-inkstone-account
 
+English | [中文](README.zh.md)
+
 Inkstone (端砚) account service — [KEP-0002](../../../../inkstone-keps/KEP-0002-dsh-fork-inkstone-provider.md) milestone M2.
 
 Unit SSO for the harness, extracted from the 书生·端砚 desktop (`intern-inkstone`,

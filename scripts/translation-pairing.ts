@@ -127,6 +127,8 @@ const NON_SOURCE_DIRECTORIES = new Set([
 
 /** Glob traversal exclusions corresponding to the non-source path predicate. */
 export const TRANSLATION_SCOPE_GLOB_EXCLUDES = [
+  // Local-mode KEP design logs are per-clone, git-excluded, and single-language by design.
+  'keps/**',
   '.agents/notes/archived/**',
   '**/node_modules/**',
   '**/lib/**',

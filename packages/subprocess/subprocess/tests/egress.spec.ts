@@ -81,6 +81,23 @@ describe('child process egress', () => {
     expect(seen.join('|')).toContain('child-probe.invalid')
   })
 
+  it('the child env carries no credential-shaped, DSH, or INKSTONE names', () => {
+    process.env.DEEPSEEK_API_KEY = 'must-not-leak'
+    process.env.DSH_HOME = '/must-not-leak'
+    process.env.INKSTONE_HOME = '/must-not-leak'
+    try {
+      const child = scrubbedParentEnv()
+      expect(child.DEEPSEEK_API_KEY).toBeUndefined()
+      expect(child.DSH_HOME).toBeUndefined()
+      expect(child.INKSTONE_HOME).toBeUndefined()
+      expect(child.PATH).toBe(process.env.PATH)
+    } finally {
+      delete process.env.DEEPSEEK_API_KEY
+      delete process.env.DSH_HOME
+      delete process.env.INKSTONE_HOME
+    }
+  })
+
   it('a child Node reaches a proxy the user gave only as ALL_PROXY', async () => {
     process.env.ALL_PROXY = proxyUrl
     const dispose = await installProxyFromEnvironment(

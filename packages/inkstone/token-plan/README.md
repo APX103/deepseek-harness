@@ -1,10 +1,12 @@
 # @deepseek-ai/dsh-inkstone-token-plan
 
+English | [中文](README.zh.md)
+
 Inkstone (端砚) Token Plan service — [KEP-0002](../../../../inkstone-keps/KEP-0002-dsh-fork-inkstone-provider.md) milestone M3.
 
 墨点余额与提额，extracted from the 书生·端砚 desktop web-api. Six operations over the
-platform `/tokenplan/v1` surface, authenticated by `inkstone-account` (with the
-`INKSTONE_JWT` environment as fallback); the free-grant pair sends the verified
+platform `/tokenplan/v1` surface, authenticated by the `inkstone-account` service (the sole
+token source; no environment fallback exists); the free-grant pair sends the verified
 `ssoUid` in the `id` header per the desktop contract. Response semantics follow
 `2026-11-02-token-plan-entry.md`: `available_credits` arrives as string or number
 and must be finite non-negative; UI shows three decimals via

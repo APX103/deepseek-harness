@@ -1,0 +1,25 @@
+# Bilingual-pair consistency record for inkstone-manual-test.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/inkstone-manual-test.md
+/inkstone-manual-test-runbook-kep-0002-branch-ours-provider:
+  en: 1d16d13042a5fe42
+  zh: b3c37d1e3633807b
+/inkstone-manual-test-runbook-kep-0002-branch-ours-provider/0-preflight:
+  en: 418800176679f729
+  zh: 9c36ec777b71323c
+/inkstone-manual-test-runbook-kep-0002-branch-ours-provider/1-unit-tests-all-green:
+  en: d77dd49fc42a1467
+  zh: 3dab715b9b30f7d7
+/inkstone-manual-test-runbook-kep-0002-branch-ours-provider/2-smoke-script-real-chain-no-ui:
+  en: 3291cf7980144d96
+  zh: aa95c791a79452bd
+/inkstone-manual-test-runbook-kep-0002-branch-ours-provider/3-desktop-app-from-source:
+  en: 1d3a902690eec0ef
+  zh: 0211852b35d270e9
+/inkstone-manual-test-runbook-kep-0002-branch-ours-provider/4-configuration-overrides-as-needed:
+  en: 61af6df92b48b113
+  zh: 0482412272d3ddf4
+/inkstone-manual-test-runbook-kep-0002-branch-ours-provider/5-feedback-format:
+  en: 2f0a6779c40033b6
+  zh: de96fdb969dfcd91
