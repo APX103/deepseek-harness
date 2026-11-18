@@ -1,0 +1,22 @@
+# Bilingual-pair consistency record for 2026-11-18-inkstone-product-dsh-runtime-lineage.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-18-inkstone-product-dsh-runtime-lineage.md
+/agent-note-inkstone-is-the-product-deepseek-harness-is-its-runtime:
+  en: 1e6a0e35e9c4e584
+  zh: ec73be4f805ca9aa
+/agent-note-inkstone-is-the-product-deepseek-harness-is-its-runtime/problem:
+  en: cbde716e66266ce1
+  zh: bbc18d0baf1c5261
+/agent-note-inkstone-is-the-product-deepseek-harness-is-its-runtime/decision:
+  en: acdebc9cc9ccd1c9
+  zh: 363c7db1ae7e17bc
+/agent-note-inkstone-is-the-product-deepseek-harness-is-its-runtime/alternatives-considered:
+  en: 47da1b68a1453658
+  zh: 8b1aeb209d758beb
+/agent-note-inkstone-is-the-product-deepseek-harness-is-its-runtime/consequences:
+  en: 3a1fbfaf59ec8e43
+  zh: 25df84d04213b455
+/agent-note-inkstone-is-the-product-deepseek-harness-is-its-runtime/testing:
+  en: cdf1e6067a2227c0
+  zh: d912002545b2231c
