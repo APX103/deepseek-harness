@@ -44,11 +44,38 @@ async function failureOf(promise: Promise<unknown>): Promise<{ code?: string }> 
 describe('inkstone token plan client', () => {
   it('normalizes the balance from string or number', async () => {
     const numeric = route(() => ok({ available_credits: 12.5 }))
-    await expect(new TokenPlanClient({ config, fetch: numeric.fetchImpl }).balance('jwt')).resolves.toEqual({ credits: 12.5 })
+    await expect(new TokenPlanClient({ config, fetch: numeric.fetchImpl }).balance('jwt')).resolves.toEqual({ credits: 12.5, windows: [], effectiveCredits: 12.5 })
     const textual = route(() => ok({ available_credits: '3.25' }))
-    await expect(new TokenPlanClient({ config, fetch: textual.fetchImpl }).balance('jwt')).resolves.toEqual({ credits: 3.25 })
+    await expect(new TokenPlanClient({ config, fetch: textual.fetchImpl }).balance('jwt')).resolves.toEqual({ credits: 3.25, windows: [], effectiveCredits: 3.25 })
     expect(formatInkstoneCredits(3.25)).toBe('3.250')
     expect(formatInkstoneCredits(NaN)).toBe('0.000')
+  })
+
+  it('parses enabled usage windows and caps the effective balance', async () => {
+    const full = route(() => ok({
+      available_credits: '9791.883',
+      usage_windows: {
+        '5h': { enabled: true, limit_credits: '1000.000', used_credits: '400.000', remaining_credits: '600.000', next_recover_at: '2026-11-18 15:00:41' },
+        '7d': { enabled: true, limit_credits: '4000.000', used_credits: '0.000', remaining_credits: '4000.000', next_recover_at: '2026-11-24 20:00:41' },
+        off: { enabled: false, limit_credits: '1.000', used_credits: '0.000', remaining_credits: '1.000' },
+      },
+    }))
+    await expect(new TokenPlanClient({ config, fetch: full.fetchImpl }).balance('jwt')).resolves.toEqual({
+      credits: 9791.883,
+      effectiveCredits: 600,
+      windows: [
+        { id: '5h', limitCredits: 1000, usedCredits: 400, remainingCredits: 600, nextRecoverAt: '2026-11-18 15:00:41' },
+        { id: '7d', limitCredits: 4000, usedCredits: 0, remainingCredits: 4000, nextRecoverAt: '2026-11-24 20:00:41' },
+      ],
+    })
+    const malformed = route(() => ok({
+      available_credits: '10',
+      usage_windows: {
+        '5h': { enabled: true, limit_credits: 'NaN', used_credits: '0.000', remaining_credits: '1.000' },
+        bad: 'not-a-row',
+      },
+    }))
+    await expect(new TokenPlanClient({ config, fetch: malformed.fetchImpl }).balance('jwt')).resolves.toEqual({ credits: 10, windows: [], effectiveCredits: 10 })
   })
 
   it('rejects unusable balances and envelope errors', async () => {

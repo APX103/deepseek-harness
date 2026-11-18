@@ -282,6 +282,26 @@ describe('inkstone failures', () => {
     await expect(failureOf(baseOptions, fetchImpl)).resolves.toMatchObject({ code: 'ACCOUNT_QUOTA' })
   })
 
+  it('names the binding window when the rejection envelope carries it', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({
+      code: '403005',
+      data: { window: '5h', next_recover_at: '2026-11-18 15:00:41' },
+    }, 403))
+    await expect(failureOf(baseOptions, fetchImpl)).resolves.toMatchObject({
+      code: 'ACCOUNT_QUOTA',
+      message: expect.stringContaining('5h'),
+    })
+  })
+
+  it('maps the Token Plan user rate limit to a retryable rate limit', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({
+      code: '429005',
+      msg: 'TokenPlan user rate limit reached; retry later',
+      data: { reason: 'TOKEN_PLAN_USER_RATE_LIMITED', retryable: false },
+    }, 429))
+    await expect(failureOf(baseOptions, fetchImpl)).resolves.toMatchObject({ code: 'RATE_LIMIT' })
+  })
+
   it('maps a 429 Token Plan rejection', async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ error_code: '429004' }, 429))
     await expect(failureOf(baseOptions, fetchImpl)).resolves.toMatchObject({ code: 'ACCOUNT_QUOTA' })
@@ -292,9 +312,16 @@ describe('inkstone failures', () => {
     await expect(failureOf(baseOptions, fetchImpl)).resolves.toMatchObject({ code: 'ACCOUNT_TOKEN_INVALID' })
   })
 
-  it('maps a mid-stream Token Plan error event', async () => {
+  it('maps a mid-stream Token Plan user rate limit to a retryable rate limit', async () => {
     const fetchImpl = vi.fn(async () =>
-      sseResponse([{ type: 'error', code: '429005', message: 'insufficient credits', retryable: false }]),
+      sseResponse([{ type: 'error', code: '429005', message: 'rate limit reached', retryable: false }]),
+    )
+    await expect(failureOf(baseOptions, fetchImpl)).resolves.toMatchObject({ code: 'RATE_LIMIT' })
+  })
+
+  it('maps a mid-stream Token Plan balance rejection', async () => {
+    const fetchImpl = vi.fn(async () =>
+      sseResponse([{ type: 'error', code: '429004', message: 'insufficient credits', retryable: false }]),
     )
     await expect(failureOf(baseOptions, fetchImpl)).resolves.toMatchObject({ code: 'ACCOUNT_QUOTA' })
   })

@@ -10,6 +10,7 @@ export const en = {
   'menu.uid': 'UID',
   'menu.signOut': 'Sign out',
   'balance.title': 'Inkstone balance (credits)',
+  'balance.window.qualifier': '({window} window)',
   'label.signedOut': 'Not signed in',
   'gate.hint': 'The sign-in window opens on the desktop at startup; if it was closed, restart the app and sign in again.',
 } satisfies Record<string, string>
@@ -22,6 +23,7 @@ export const zh = {
   'menu.uid': 'UID',
   'menu.signOut': '退出登录',
   'balance.title': '墨点余额',
+  'balance.window.qualifier': '（{window} 窗口）',
   'label.signedOut': '未登录',
   'gate.hint': '登录窗口已在桌面打开；若已关闭，请重启应用后再试',
 } satisfies Record<keyof typeof en, string>

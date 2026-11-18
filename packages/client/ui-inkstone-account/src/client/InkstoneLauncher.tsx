@@ -9,6 +9,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { InkstoneAccountSource } from './account-source.ts'
 import type { InkstoneBalanceSource } from './balance-source.ts'
+import { bindingWindow } from './balance-source.ts'
 import { NS } from './locales.ts'
 import css from './InkstoneLauncher.module.css'
 
@@ -34,6 +35,7 @@ export type InkstoneLauncherProps = PropsRuntime<'settings.launcher'> & PropsLoc
 export function InkstoneLauncher({ wide, openSettings, settingsShortcut, useAccount, useBalance, signOut, t }: InkstoneLauncherProps) {
   const account = useAccount(state => state)
   const balance = useBalance(value => value)
+  const bound = bindingWindow(balance)
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [avatarFailed, setAvatarFailed] = useState(false)
@@ -82,7 +84,12 @@ export function InkstoneLauncher({ wide, openSettings, settingsShortcut, useAcco
             ? [
               { id: 'uid', label: `${t('menu.uid')} ${user.ssoUid}`, disabled: true },
               ...(balance !== undefined
-                ? [{ id: 'balance', label: `${t('balance.title')} ${balance.toFixed(3)}`, disabled: true }]
+                ? [{
+                  id: 'balance',
+                  label: `${t('balance.title')} ${balance.effectiveCredits.toFixed(3)}`
+                    + (bound !== undefined ? ` ${t('balance.window.qualifier', { window: bound.id })}` : ''),
+                  disabled: true,
+                }]
                 : []),
             ]
             : []),

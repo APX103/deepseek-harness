@@ -6,6 +6,7 @@
 import type {} from '@deepseek-ai/dsh-client-ui-settings-models/client'
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { InkstoneBalanceSource } from './balance-source.ts'
+import { bindingWindow } from './balance-source.ts'
 import { NS } from './locales.ts'
 import css from './InkstoneBalance.module.css'
 
@@ -23,12 +24,16 @@ export type InkstoneBalanceProps = PropsLocale<typeof NS> & InjectFace<InkstoneB
  * @returns the balance row, or nothing while the balance is unavailable.
  */
 export function InkstoneBalance({ useBalance, t }: InkstoneBalanceProps) {
-  const credits = useBalance(value => value)
-  if (credits === undefined) return null
+  const balance = useBalance(value => value)
+  if (balance === undefined) return null
+  const bound = bindingWindow(balance)
   return (
     <div className={css.row}>
       <span className={css.label}>{t('balance.title')}</span>
-      <span className={css.value}>{credits.toFixed(3)}</span>
+      <span className={css.value}>
+        {balance.effectiveCredits.toFixed(3)}
+        {bound !== undefined && <span className={css.window}> {t('balance.window.qualifier', { window: bound.id })}</span>}
+      </span>
     </div>
   )
 }

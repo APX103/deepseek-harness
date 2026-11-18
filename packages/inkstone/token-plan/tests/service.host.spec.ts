@@ -26,7 +26,7 @@ it('serves the balance through the ctx service proxy', async () => {
       headers: { 'content-type': 'application/json' },
     })) as never,
   })
-  await expect(ctx.inkstoneTokenPlan.balance()).resolves.toEqual({ credits: 12.5 })
+  await expect(ctx.inkstoneTokenPlan.balance()).resolves.toEqual({ credits: 12.5, windows: [], effectiveCredits: 12.5 })
   await expect(ctx.inkstoneTokenPlan.freeGrantStatus()).rejects.toMatchObject({ code: 'TOKEN_PLAN_UNAUTHORIZED' })
 })
 

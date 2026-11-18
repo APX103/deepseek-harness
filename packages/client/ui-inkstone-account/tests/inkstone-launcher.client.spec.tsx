@@ -4,15 +4,18 @@ import { afterEach, expect, it, vi } from 'vitest'
 import type { GlobalStandardProps } from '@deepseek-ai/dsh-client-ui-slots'
 import { InkstoneLauncher, type InkstoneLauncherFace } from '../src/client/InkstoneLauncher.tsx'
 import type { InkstoneAccountSnapshot } from '../src/client/account-source.ts'
+import type { InkstoneBalanceSnapshot } from '../src/client/balance-source.ts'
 import { en, zh, type InkstoneKey } from '../src/client/locales.ts'
 
 afterEach(() => { cleanup() })
+
+const balanceSnapshot = { credits: 9791.883, effectiveCredits: 9791.883, windows: [] }
 
 function faceOf(snapshot: InkstoneAccountSnapshot, signOut = vi.fn(() => Promise.resolve())): InkstoneLauncherFace {
   return {
     hooks: {
       account: { getSnapshot: () => snapshot, subscribe: () => () => {}, markSignedOut: () => {} },
-      balance: { getSnapshot: () => 9791.883, subscribe: () => () => {} },
+      balance: { getSnapshot: () => balanceSnapshot, subscribe: () => () => {} },
     },
     signOut,
   }
@@ -23,13 +26,17 @@ function mount(
   copy: typeof en | typeof zh = zh,
   signOut = vi.fn(() => Promise.resolve()),
   openSettings = vi.fn(),
+  balance: InkstoneBalanceSnapshot = balanceSnapshot,
 ) {
   const face = faceOf(snapshot, signOut)
   render(<InkstoneLauncher {...({} as GlobalStandardProps)} {...face} wide
     settingsOpen={false} openSettings={openSettings} openOnboarding={() => {}}
     useAccount={selector => selector(snapshot)}
-    useBalance={selector => selector(9791.883)}
-    t={key => (key in copy ? copy[key as InkstoneKey] : key)} />)
+    useBalance={selector => selector(balance)}
+    t={(key, params) => {
+      const template = key in copy ? copy[key as InkstoneKey] : key
+      return Object.entries(params ?? {}).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), template)
+    }} />)
   return face
 }
 
@@ -57,6 +64,17 @@ it('falls back to the initial letter when the avatar is absent', () => {
   mount({ status: 'signed-in', user: { ssoUid: '1', username: 'plain-user' } }, en)
   expect(screen.getByText('P')).toBeTruthy()
   expect(screen.getByText('plain-user')).toBeTruthy()
+})
+
+it('qualifies the balance with the binding window when one caps spending', async () => {
+  mount(signedIn, zh, vi.fn(), vi.fn(), {
+    credits: 9791.883,
+    effectiveCredits: 600,
+    windows: [{ id: '5h', limitCredits: 1000, usedCredits: 400, remainingCredits: 600 }],
+  })
+  fireEvent.click(screen.getByRole('button', { name: zh['menu.aria'] }))
+  const item = await screen.findByRole('menuitem', { name: /600\.000/ })
+  expect(item.textContent).toContain('（5h 窗口）')
 })
 
 it('renders the signed-out row without a sign-out action', async () => {

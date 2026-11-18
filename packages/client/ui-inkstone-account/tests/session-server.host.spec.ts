@@ -39,7 +39,12 @@ function fakeContext(account: FakeAccount) {
   return { ctx, listeners, cleanups }
 }
 
-let tokenPlan: { balance: () => Promise<{ credits: number }> } | undefined
+interface FakeBalance {
+  credits: number
+  effectiveCredits: number
+  windows: readonly { id: string; limitCredits: number; usedCredits: number; remainingCredits: number; nextRecoverAt?: string }[]
+}
+let tokenPlan: { balance: () => Promise<FakeBalance> } | undefined
 
 interface InjectionRow {
   kind: string
@@ -194,7 +199,11 @@ describe('inkstone session endpoint', () => {
   })
 
   it('serves the Token Plan balance when the service is present and 404 otherwise', async () => {
-    tokenPlan = { balance: vi.fn(async () => ({ credits: 1234.5 })) }
+    tokenPlan = { balance: vi.fn(async () => ({
+      credits: 1234.5,
+      effectiveCredits: 600,
+      windows: [{ id: '5h', limitCredits: 1000, usedCredits: 400, remainingCredits: 600, nextRecoverAt: '2026-11-18 15:00:41' }],
+    })) }
     try {
       const endpoint = await boot({
         deployment: () => deployment,
@@ -206,7 +215,11 @@ describe('inkstone session endpoint', () => {
       try {
         const response = await fetch(`${endpoint.baseUrl}/session/balance`)
         expect(response.status).toBe(200)
-        await expect(response.json()).resolves.toEqual({ credits: 1234.5 })
+        await expect(response.json()).resolves.toEqual({
+          credits: 1234.5,
+          effectiveCredits: 600,
+          windows: [{ id: '5h', limitCredits: 1000, usedCredits: 400, remainingCredits: 600, nextRecoverAt: '2026-11-18 15:00:41' }],
+        })
       } finally {
         endpoint.close()
       }

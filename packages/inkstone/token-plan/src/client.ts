@@ -19,9 +19,24 @@ export interface TokenPlanClientDeps {
   readonly fetch: TokenPlanFetch
 }
 
+/** One Token Plan usage window fact (for example the 5h or 7d credit window). */
+export interface TokenPlanUsageWindow {
+  /** Window identifier as the platform names it (`5h`, `7d`, …). */
+  readonly id: string
+  readonly limitCredits: number
+  readonly usedCredits: number
+  readonly remainingCredits: number
+  /** Recovery timestamp the platform reports, when present. */
+  readonly nextRecoverAt?: string
+}
+
 /** The 墨点 balance in credits. */
 export interface TokenPlanBalance {
   readonly credits: number
+  /** Enabled usage windows; empty when the platform reports none. */
+  readonly windows: readonly TokenPlanUsageWindow[]
+  /** Spendable now: the total capped by the tightest enabled window. */
+  readonly effectiveCredits: number
 }
 
 /** Free-grant status or claim outcome. */
@@ -60,7 +75,9 @@ export class TokenPlanClient {
     if (!Number.isFinite(credits) || credits < 0) {
       throw new TokenPlanError('TOKEN_PLAN_RESPONSE_INVALID', 'The balance response carried no usable available_credits.')
     }
-    return { credits }
+    const windows = windowsOf(fieldOf(data, 'usage_windows'))
+    const effectiveCredits = windows.reduce((floor, window) => Math.min(floor, window.remainingCredits), credits)
+    return { credits, windows, effectiveCredits }
   }
 
   /** Whether the account has received the free 墨点 grant. */
@@ -206,6 +223,35 @@ function fieldOf(data: unknown, field: string): unknown {
 
 function booleanOf(value: unknown): boolean {
   return value === true || value === 'true' || value === 1 || value === '1'
+}
+
+/** Parse one usage-window row; amounts arrive as JSON strings. Malformed rows drop out. */
+function windowOf(id: string, value: unknown): TokenPlanUsageWindow | undefined {
+  if (value === null || typeof value !== 'object') return undefined
+  const row = value as Record<string, unknown>
+  if (row['enabled'] !== true) return undefined
+  const limitCredits = Number(row['limit_credits'])
+  const usedCredits = Number(row['used_credits'])
+  const remainingCredits = Number(row['remaining_credits'])
+  if (![limitCredits, usedCredits, remainingCredits].every(n => Number.isFinite(n) && n >= 0)) return undefined
+  const nextRecoverAt = boundedText(row['next_recover_at'], 40)
+  return {
+    id: boundedText(id, 8) === '' ? 'window' : boundedText(id, 8),
+    limitCredits,
+    usedCredits,
+    remainingCredits,
+    ...(nextRecoverAt !== '' ? { nextRecoverAt } : {}),
+  }
+}
+
+/** Normalize the `usage_windows` record; absent or malformed input yields no windows. */
+function windowsOf(value: unknown): readonly TokenPlanUsageWindow[] {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return []
+  return Object.entries(value as Record<string, unknown>)
+    .flatMap(([id, row]) => {
+      const parsed = windowOf(id, row)
+      return parsed === undefined ? [] : [parsed]
+    })
 }
 
 function boundedText(value: unknown, max: number): string {

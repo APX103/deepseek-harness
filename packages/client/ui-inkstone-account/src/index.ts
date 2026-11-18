@@ -116,7 +116,11 @@ async function handleSessionRequest(
         return
       }
       const balance = await plan.balance()
-      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ credits: balance.credits }))
+      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({
+        credits: balance.credits,
+        effectiveCredits: balance.effectiveCredits,
+        windows: balance.windows,
+      }))
       return
     }
     if (request.method === 'GET') {
