@@ -86,10 +86,7 @@ describe('dsh-base bundle', () => {
 describe('custom providers (KEP-0006)', () => {
   const rows = (): { id?: string; config?: Record<string, unknown>; disabled?: boolean }[] => {
     const root = fileURLToPath(new URL('..', import.meta.url))
-    const parsed = yaml.load(
-      readFileSync(resolve(root, 'cordis.patch.yml'), 'utf8'),
-      { schema: entryListSchema },
-    )
+    const parsed = parseEntryYaml(readFileSync(resolve(root, 'cordis.patch.yml'), 'utf8'))
     return (parsed as { insert?: { id?: string; config?: Record<string, unknown>; disabled?: boolean }[] }[]).flatMap(
       patch => patch.insert ?? [],
     )
