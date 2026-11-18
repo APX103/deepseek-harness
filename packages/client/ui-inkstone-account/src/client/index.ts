@@ -131,8 +131,8 @@ function mountGate(registerUrl: string): () => void {
   subtitle.textContent = '上海人工智能实验室 · 书生生态'
   subtitle.style.cssText = ['margin:0 0 24px', 'font-size:13px', 'color:#7a8496'].join(';')
 
-  // The desktop shell opens the SSO window at boot; without preload/IPC the
-  // gate cannot reopen it, so the button only restates the hint.
+  // The desktop turns this page into the login page through an IPC bridge;
+  // a plain browser has no bridge, so the button only restates the hint there.
   const signIn = document.createElement('button')
   signIn.type = 'button'
   signIn.textContent = '登 录'
@@ -151,7 +151,25 @@ function mountGate(registerUrl: string): () => void {
   hint.setAttribute('role', 'status')
   hint.style.cssText = ['min-height:18px', 'margin:12px 0 0', 'font-size:12px', 'color:#7a8496'].join(';')
   signIn.addEventListener('click', () => {
-    hint.textContent = '登录窗口已在桌面打开；若已关闭，请重启应用后再试'
+    const desktop = (globalThis as { dshDesktop?: { inkstoneSignIn?: () => Promise<string> } }).dshDesktop
+    if (desktop?.inkstoneSignIn === undefined) {
+      hint.textContent = '当前环境无法打开登录页，请重启应用后再试'
+      return
+    }
+    hint.textContent = '正在进入登录页…'
+    signIn.disabled = true
+    void desktop.inkstoneSignIn().then((outcome: string) => {
+      signIn.disabled = false
+      if (outcome === 'signed-in') {
+        hint.textContent = '登录成功，正在进入…'
+        location.reload()
+      } else {
+        hint.textContent = outcome === 'cancelled' ? '登录已取消' : '登录失败，请重试'
+      }
+    }).catch(() => {
+      signIn.disabled = false
+      hint.textContent = '登录失败，请重试'
+    })
   })
 
   const register = document.createElement('p')

@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 vi.mock('electron', () => ({ BrowserWindow: class { constructor(readonly options: unknown) {} } }))
-import { inkstoneSessionBaseUrl } from '../src/inkstone-sign-in.ts'
+import { exchangeSignInCode, fetchSsoTarget, inkstoneSessionBaseUrl } from '../src/inkstone-sign-in.ts'
 
 const row = (baseUrl: string): unknown => ({ kind: 'global', name: 'INKSTONE_ACCOUNT', value: { baseUrl, registerUrl: '' } })
 
@@ -24,5 +24,45 @@ describe('inkstoneSessionBaseUrl', () => {
     expect(inkstoneSessionBaseUrl([{ kind: 'global', name: 'INKSTONE_ACCOUNT', value: {} }])).toBeUndefined()
     expect(inkstoneSessionBaseUrl([{ kind: 'global', name: 'INKSTONE_ACCOUNT', value: { baseUrl: '' } }])).toBeUndefined()
     expect(inkstoneSessionBaseUrl([null, 42])).toBeUndefined()
+  })
+})
+
+describe('fetchSsoTarget and exchangeSignInCode', () => {
+  it('fetches the SSO target and validates the payload', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({
+      loginUrl: 'https://sso.example/login',
+      redirectUrl: 'https://discovery.example/',
+    }), { status: 200 })) as unknown as typeof fetch
+    try {
+      await expect(fetchSsoTarget('http://127.0.0.1:1/token')).resolves.toEqual({
+        loginUrl: 'https://sso.example/login',
+        redirectUrl: 'https://discovery.example/',
+      })
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ loginUrl: 42 }), { status: 200 })) as unknown as typeof fetch
+    try {
+      await expect(fetchSsoTarget('http://127.0.0.1:1/token')).resolves.toBeUndefined()
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('exchanges a code and reports the response status', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = vi.fn(async () => new Response('{}', { status: 200 })) as unknown as typeof fetch
+    try {
+      await expect(exchangeSignInCode('http://127.0.0.1:1/token', 'uaa::code::x')).resolves.toBe(true)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+    globalThis.fetch = vi.fn(async () => new Response('{}', { status: 401 })) as unknown as typeof fetch
+    try {
+      await expect(exchangeSignInCode('http://127.0.0.1:1/token', 'uaa::code::x')).resolves.toBe(false)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
   })
 })

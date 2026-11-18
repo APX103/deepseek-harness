@@ -32,6 +32,7 @@ export const DESKTOP_IPC = {
   fileDragStart: 'dsh-desktop:file-drag-start',
   fileDragRelease: 'dsh-desktop:file-drag-release',
   deviceInfo: 'dsh-desktop:device-info',
+  inkstoneSignIn: 'dsh-desktop:inkstone-sign-in',
   localeBootstrap: 'dsh-desktop:locale-bootstrap',
   localeChanged: 'dsh-desktop:locale-changed',
   updatesChannelGet: 'dsh-desktop:updates-channel-get',
@@ -102,6 +103,11 @@ export interface DshDesktopProductApi {
    * @returns `name=value` fields separated by `; `, with no hostname, user name, or serial number.
    */
   deviceInfo(): Promise<string>
+  /**
+   * Reopen the Inkstone SSO sign-in window for the client login gate.
+   * @returns `signed-in`, `cancelled`, or `failed`.
+   */
+  inkstoneSignIn(): Promise<'signed-in' | 'cancelled' | 'failed'>
   readonly updates: {
     readonly channels: DesktopChannelBridge
     status(): Promise<DesktopUpdatePresentation>

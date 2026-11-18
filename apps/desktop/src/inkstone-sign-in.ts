@@ -16,8 +16,33 @@ export type InkstoneSignInOutcome =
   | 'signed-in'
   | 'already-signed-in'
   | 'cancelled'
-  | 'rejected'
+  | 'failed'
   | 'unavailable'
+
+/** The SSO page target for one interactive sign-in attempt. */
+export interface SsoTarget {
+  readonly loginUrl: string
+  readonly redirectUrl: string
+}
+
+/** Fetch the SSO login page URL and the callback URL the desktop recognizes. */
+export async function fetchSsoTarget(baseUrl: string): Promise<SsoTarget | undefined> {
+  const response = await fetch(`${baseUrl}/session/sso`, { headers: { accept: 'application/json' } })
+  if (!response.ok) return undefined
+  const body = (await response.json()) as { loginUrl?: unknown; redirectUrl?: unknown }
+  if (typeof body.loginUrl !== 'string' || typeof body.redirectUrl !== 'string') return undefined
+  return { loginUrl: body.loginUrl, redirectUrl: body.redirectUrl }
+}
+
+/** Exchange one captured callback code; true when the session authenticated. */
+export async function exchangeSignInCode(baseUrl: string, code: string): Promise<boolean> {
+  const response = await fetch(`${baseUrl}/session/code`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ code }),
+  })
+  return response.ok
+}
 
 /** Ask the session endpoint once and open the SSO page while signed out. */
 export async function ensureSignedIn(injections: readonly unknown[]): Promise<InkstoneSignInOutcome> {
@@ -25,16 +50,11 @@ export async function ensureSignedIn(injections: readonly unknown[]): Promise<In
   if (baseUrl === undefined) return 'unavailable'
   const session = await getJson<{ authenticated?: boolean }>(`${baseUrl}/session`)
   if (session.authenticated === true) return 'already-signed-in'
-  const sso = await getJson<{ loginUrl?: string; redirectUrl?: string }>(`${baseUrl}/session/sso`)
-  if (typeof sso.loginUrl !== 'string' || typeof sso.redirectUrl !== 'string') return 'unavailable'
-  const code = await captureSsoCode(sso.loginUrl, sso.redirectUrl)
+  const target = await fetchSsoTarget(baseUrl)
+  if (target === undefined) return 'failed'
+  const code = await captureSsoCode(target.loginUrl, target.redirectUrl)
   if (code === null) return 'cancelled'
-  const response = await fetch(`${baseUrl}/session/code`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ code }),
-  })
-  return response.ok ? 'signed-in' : 'rejected'
+  return await exchangeSignInCode(baseUrl, code) ? 'signed-in' : 'failed'
 }
 
 /** Extract the loopback session endpoint announced in the host boot injections. */

@@ -49,7 +49,8 @@ import { pruneCrashReports, RendererConsoleTail, writeCrashReport, type CrashRep
 import { OperationJournal } from './operation-journal.ts'
 import { runOperationReportJob, type OperationReportJobResult } from './operation-report-job.ts'
 import { openWelcomeWindow } from './welcome-window.ts'
-import { ensureSignedIn } from './inkstone-sign-in.ts'
+import { ensureSignedIn, exchangeSignInCode, fetchSsoTarget, inkstoneSessionBaseUrl } from './inkstone-sign-in.ts'
+import { readSsoCallbackCode } from '@deepseek-ai/dsh-client-ui-inkstone-account'
 import { WELCOME_IPC, needsWelcome, type WelcomeNotice } from './welcome-api.ts'
 import { connectDesktopWelcome, type DesktopWelcomeBackend } from './welcome-backend.ts'
 import { DesktopUpdateJournal } from './update-journal.ts'
@@ -88,6 +89,10 @@ let windowsLanguage: string | undefined = readDesktopLocaleCache(app.getPath('us
  * failure while tearing down a ready backend still reads as `running`.
  */
 let backendReady = false
+/** The Inkstone loopback session endpoint announced at boot; feeds the login-gate channel. */
+let inkstoneBaseUrl: string | undefined
+/** True while the main window itself hosts the SSO page; the will-navigate guard stands down. */
+let inkstoneLoginNavigation = false
 /** Error-level console output of the primary window, attached to crash reports. */
 const rendererConsole = new RendererConsoleTail()
 
@@ -368,6 +373,7 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
     }
   })
   window.webContents.on('will-navigate', (event, url) => {
+    if (inkstoneLoginNavigation) return
     const destination = new URL(url)
     const current = new URL(window.webContents.getURL())
     if (destination.protocol !== `${SCHEME}:`
@@ -833,6 +839,49 @@ async function main(): Promise<void> {
     }
     if (typeof message !== 'string') throw new Error('dsh desktop: startup failure must be text')
     reportFatal(new Error(message), 'web-boot')
+  })
+
+  // The client login gate becomes the login page: the main window itself
+  // loads the SSO page, the callback redirect is captured in place, and the
+  // window returns to the application — no separate sign-in window.
+  ipcMain.handle(DESKTOP_IPC.inkstoneSignIn, async (event) => {
+    assertProductSender(event)
+    const window = mainWindow
+    if (inkstoneBaseUrl === undefined || window === undefined || window.isDestroyed()) {
+      throw new Error('dsh desktop: no inkstone session endpoint announced')
+    }
+    const target = await fetchSsoTarget(inkstoneBaseUrl)
+    if (target === undefined) return 'failed' as const
+    const code = await new Promise<string | null>((resolve) => {
+      let settled = false
+      const finish = (value: string | null): void => {
+        if (settled) return
+        settled = true
+        inkstoneLoginNavigation = false
+        window.webContents.off('will-navigate', capture)
+        window.webContents.off('will-redirect', capture)
+        window.webContents.off('before-input-event', onKey)
+        void navigateMain(applicationUrl).catch(() => undefined)
+        resolve(value)
+      }
+      const capture = (navigation: Electron.Event, url: string): void => {
+        const captured = readSsoCallbackCode(url, { redirectUrl: target.redirectUrl })
+        if (captured !== null) {
+          navigation.preventDefault()
+          finish(captured)
+        }
+      }
+      const onKey = (_navigation: Electron.Event, input: Electron.Input): void => {
+        if (input.type === 'keyDown' && input.key === 'Escape') finish(null)
+      }
+      inkstoneLoginNavigation = true
+      window.webContents.on('will-navigate', capture)
+      window.webContents.on('will-redirect', capture)
+      window.webContents.on('before-input-event', onKey)
+      void window.loadURL(target.loginUrl).catch(() => { finish(null) })
+    })
+    if (code === null) return 'cancelled' as const
+    return (await exchangeSignInCode(inkstoneBaseUrl, code)) ? 'signed-in' as const : 'failed' as const
   })
 
   ipcMain.handle(DESKTOP_IPC.browserAcquire, (event, workspace: unknown) => {
@@ -1473,6 +1522,7 @@ async function main(): Promise<void> {
     if (!enteredWorkspace) {
       // KEP-0003: sign-in gates the workspace. A cancelled or failed attempt
       // still enters; the client gate then explains the state in place.
+      inkstoneBaseUrl = inkstoneSessionBaseUrl(injections)
       await ensureSignedIn(injections).catch((error: unknown) => {
         console.error('desktop: inkstone sign-in failed', error)
         return 'unavailable' as const
