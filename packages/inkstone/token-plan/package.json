@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-inkstone-token-plan",
-  "description": "Inkstone (端砚) Token Plan service: 墨点 balance, free-grant, and credit-increase operations over the platform API (KEP-0002 M3)",
+  "description": "Inkstone (\u7aef\u781a) Token Plan service: \u58a8\u70b9 balance, free-grant, and credit-increase operations over the platform API (KEP-0002 M3)",
   "version": "0.2.2-rc.2",
   "publishConfig": {
     "access": "public"
@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~"
+    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
+    "@deepseek-ai/dsh-inkstone-account": "workspace:*"
   }
 }

@@ -6,7 +6,7 @@
  * @module dsh-inkstone-token-plan/service
  */
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { Config } from './config.ts'
+import { Config } from './config.ts'
 import { TokenPlanClient } from './client.ts'
 import type {
   CreditIncreaseApplication,
@@ -31,7 +31,7 @@ export interface TokenPlanTokenSource {
 
 /** Injectable ssoUid source for the free-grant `id` header. */
 export interface TokenPlanIdentitySource {
-  (): string | undefined
+  (): Promise<string | undefined>
 }
 
 /** Injectable service dependencies. */
@@ -41,63 +41,82 @@ export interface InkstoneTokenPlanDeps {
   readonly fetch?: TokenPlanFetch
 }
 
+/** The account service surface this service resolves its identity from. */
+interface InkstoneAccountLike {
+  resolveToken?: () => Promise<string | undefined>
+  state?: () => Promise<{ user?: { ssoUid?: string } }>
+}
+
 /**
  * The Inkstone Token Plan service: 墨点 balance, free-grant, and
  * credit-increase operations behind the signed-in account.
  */
 export class InkstoneTokenPlan extends Service {
-  readonly #client: TokenPlanClient
-  readonly #resolveToken: TokenPlanTokenSource
-  readonly #resolveSsoUid: TokenPlanIdentitySource
+  static Config = Config
+
+  // TypeScript `private`, not ECMAScript `#`: cordis service calls run with a
+  // shadow `this`, and `#` fields fail the proxy brand check on any method
+  // invoked through `ctx.inkstoneTokenPlan`.
+  private readonly client: TokenPlanClient
+  private readonly resolveTokenSource: TokenPlanTokenSource
+  private readonly resolveSsoUidSource: TokenPlanIdentitySource
 
   constructor(ctx: Context, config: Config, deps?: InkstoneTokenPlanDeps) {
     super(ctx, 'inkstoneTokenPlan')
     const fetchImpl: TokenPlanFetch = deps?.fetch ?? ((input, init) => fetch(input, init))
-    this.#resolveToken = deps?.resolveToken ?? (() => Promise.resolve(undefined))
-    this.#resolveSsoUid = deps?.resolveSsoUid ?? (() => undefined)
-    this.#client = new TokenPlanClient({ config, fetch: fetchImpl })
+    // The package default-exports the class, so the loader instantiates this
+    // as a class plugin with (ctx, config) only: identity defaults resolve
+    // lazily from the inkstone-account service, and tests or embeddings can
+    // inject their own sources through `deps`.
+    const account = (): InkstoneAccountLike | undefined => ctx.get('inkstoneAccount') as never
+    this.resolveTokenSource = deps?.resolveToken ?? (async () => {
+      const fromService = await account()?.resolveToken?.()
+      return fromService === '' ? undefined : fromService
+    })
+    this.resolveSsoUidSource = deps?.resolveSsoUid ?? (async () => (await account()?.state?.())?.user?.ssoUid)
+    this.client = new TokenPlanClient({ config, fetch: fetchImpl })
   }
 
   /** The 墨点 balance of the signed-in account. */
   async balance(signal?: AbortSignal): Promise<TokenPlanBalance> {
-    return this.#client.balance(await this.#token(), signal)
+    return this.client.balance(await this.token(), signal)
   }
 
   /** Whether the account has received the free 墨点 grant. */
   async freeGrantStatus(signal?: AbortSignal): Promise<FreeGrantOutcome> {
-    return this.#client.freeGrantStatus(await this.#token(), this.#requireSsoUid(), signal)
+    return this.client.freeGrantStatus(await this.token(), await this.requireSsoUid(), signal)
   }
 
   /** Claim the free 墨点 grant for a bound-phone account. */
   async claimFreeGrant(signal?: AbortSignal): Promise<FreeGrantOutcome> {
-    return this.#client.claimFreeGrant(await this.#token(), this.#requireSsoUid(), signal)
+    return this.client.claimFreeGrant(await this.token(), await this.requireSsoUid(), signal)
   }
 
   /** The selectable credit-increase scenario tree. */
   async creditIncreaseScenarios(signal?: AbortSignal): Promise<readonly CreditIncreaseScenario[]> {
-    return this.#client.creditIncreaseScenarios(await this.#token(), signal)
+    return this.client.creditIncreaseScenarios(await this.token(), signal)
   }
 
   /** The account's submitted credit-increase applications. */
   async creditIncreaseApplications(signal?: AbortSignal): Promise<readonly CreditIncreaseApplication[]> {
-    return this.#client.creditIncreaseApplications(await this.#token(), signal)
+    return this.client.creditIncreaseApplications(await this.token(), signal)
   }
 
   /** Submit one credit-increase application. */
   async applyCreditIncrease(scenarioId: string, reason: string, signal?: AbortSignal): Promise<CreditIncreaseApplication> {
-    return this.#client.applyCreditIncrease(await this.#token(), scenarioId, reason, signal)
+    return this.client.applyCreditIncrease(await this.token(), scenarioId, reason, signal)
   }
 
-  async #token(): Promise<string> {
-    const token = await this.#resolveToken()
+  async token(): Promise<string> {
+    const token = await this.resolveTokenSource()
     if (token === undefined || token === '') {
       throw new TokenPlanError('TOKEN_PLAN_UNAUTHORIZED', 'Sign in to read the Token Plan.')
     }
     return token
   }
 
-  #requireSsoUid(): string {
-    const ssoUid = this.#resolveSsoUid()
+  async requireSsoUid(): Promise<string> {
+    const ssoUid = await this.resolveSsoUidSource()
     if (ssoUid === undefined || ssoUid === '') {
       throw new TokenPlanError('TOKEN_PLAN_UNAUTHORIZED', 'The free grant requires a signed-in account profile.')
     }

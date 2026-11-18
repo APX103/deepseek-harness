@@ -1,25 +1,48 @@
 /**
- * The Inkstone sign-in surface, browser half: a full-screen 登录 gate over
- * the injected session endpoint (KEP-0002 D10). Renders only while the
- * inkstone-account session is unauthenticated; a successful sign-in reloads
- * the page into the signed-in client. Registration stays on the web.
+ * The Inkstone sign-in surface, browser half (KEP-0002 D10, KEP-0003): a
+ * full-screen 登录 gate over the injected session endpoint while the
+ * inkstone-account session is unauthenticated, plus the signed-in account
+ * launcher in the sidebar foot (avatar, name, UID, sign-out).
+ *
+ * KEP-0003 moved the sign-in itself into the desktop shell's SSO page window;
+ * the gate stays a brand page with a hint, registration stays on the web, and
+ * the launcher is the visible account surface with the sign-out entry.
  *
  * @module dsh-client-ui-inkstone-account/client
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import { inkstoneAccountGlobal } from '../global.ts'
+import { createInkstoneAccountSource } from './account-source.ts'
+import { createInkstoneBalanceSource } from './balance-source.ts'
+import { InkstoneBalance } from './InkstoneBalance.tsx'
+import type { InkstoneBalanceFace } from './InkstoneBalance.tsx'
+import { InkstoneBrandMark, InkstoneBrandName } from './InkstoneBrand.tsx'
+import { InkstoneLauncher } from './InkstoneLauncher.tsx'
+import type { InkstoneLauncherFace } from './InkstoneLauncher.tsx'
+import { en, zh, NS } from './locales.ts'
 
-export const inject: readonly string[] = []
+export type { InkstoneAccountSnapshot, InkstoneAccountSource } from './account-source.ts'
+export type { InkstoneBalanceSource } from './balance-source.ts'
+export type { InkstoneBalanceFace, InkstoneBalanceProps } from './InkstoneBalance.tsx'
+export type { InkstoneBrandNameProps } from './InkstoneBrand.tsx'
+export type { InkstoneLauncherFace, InkstoneLauncherProps } from './InkstoneLauncher.tsx'
+export type { InkstoneKey } from './locales.ts'
+
+/** Required client services: the slot ledger and the locale registry. */
+export const inject: readonly string[] = ['slots', 'locale']
 
 interface SessionResponse {
   readonly authenticated?: boolean
-  readonly user?: { readonly username?: string }
-  readonly code?: string
-  readonly message?: string
 }
 
+/** @param ctx - client plugin context. */
 export async function apply(ctx: ClientContext): Promise<() => Promise<void>> {
-  void ctx
+  ctx.effect(() => ctx.locale.register(NS, { en, zh }), 'inkstone-account: dictionaries')
   const endpoint = inkstoneAccountGlobal()
   if (endpoint === undefined) return () => Promise.resolve()
   let session: SessionResponse
@@ -30,22 +53,43 @@ export async function apply(ctx: ClientContext): Promise<() => Promise<void>> {
     // Without a reachable endpoint the client stays as the host composed it.
     return () => Promise.resolve()
   }
+  const source = createInkstoneAccountSource(endpoint.baseUrl)
+  const balance = createInkstoneBalanceSource(endpoint.baseUrl)
+  let gate: (() => void) | undefined
+  // The Inkstone composition replaces the local-build fallback brand.
+  ctx.effect(() => ctx.slots.inject('sidebar.brand.mark', () => ctx.slots.inject('sidebar.brand.name', function* () {
+    yield ctx.slots.register({ name: 'sidebar.brand.mark', locale: NS }, InkstoneBrandMark)
+    yield ctx.slots.register({ name: 'sidebar.brand.name', locale: NS }, InkstoneBrandName)
+  })), 'inkstone-account: brand')
+  ctx.effect(() => ctx.slots.inject('settings.launcher', () => ctx.slots.register({
+    name: 'settings.launcher',
+    locale: NS,
+    inject: (): InkstoneLauncherFace => ({
+      hooks: { account: source, balance },
+      signOut: async () => {
+        await fetch(`${endpoint.baseUrl}/session`, { method: 'DELETE' })
+        source.markSignedOut()
+        // The desktop shell opens the SSO window at boot only; after a
+        // sign-out the gate remounts and asks for a restart.
+        gate ??= mountGate(endpoint.registerUrl)
+      },
+    }),
+  }, InkstoneLauncher)), 'inkstone-account: launcher')
+  ctx.effect(() => ctx.slots.inject('settings.models.footer', () => ctx.slots.register({
+    name: 'settings.models.footer',
+    id: 'inkstone-balance',
+    locale: NS,
+    inject: (): InkstoneBalanceFace => ({ hooks: { balance } }),
+  }, InkstoneBalance)), 'inkstone-account: balance')
   if (session.authenticated === true) return () => Promise.resolve()
-  const teardown = mountGate(endpoint.baseUrl, endpoint.registerUrl)
+  gate = mountGate(endpoint.registerUrl)
   return () => {
-    teardown()
+    gate?.()
     return Promise.resolve()
   }
 }
 
-function errorMessage(failure: SessionResponse): string {
-  if (failure.code === 'AUTH_CAPTCHA_REQUIRED') return '触发人机验证：请先在网页端登录一次，再回到这里重试'
-  if (failure.code === 'AUTH_REJECTED') return '账号或密码错误'
-  if (failure.code === 'AUTH_NETWORK') return '网络异常，请稍后重试'
-  return failure.message && failure.message !== '' ? failure.message : '登录失败，请重试'
-}
-
-function mountGate(baseUrl: string, registerUrl: string): () => void {
+function mountGate(registerUrl: string): () => void {
   const overlay = document.createElement('div')
   overlay.setAttribute('data-inkstone-login', '')
   overlay.style.cssText = [
@@ -81,27 +125,12 @@ function mountGate(baseUrl: string, registerUrl: string): () => void {
   subtitle.textContent = '上海人工智能实验室 · 书生生态'
   subtitle.style.cssText = ['margin:0 0 24px', 'font-size:13px', 'color:#7a8496'].join(';')
 
-  const username = document.createElement('input')
-  username.type = 'text'
-  username.placeholder = '账号（邮箱 / 手机号 / 用户名）'
-  username.autocomplete = 'username'
-  username.style.cssText = inputStyle()
-
-  const password = document.createElement('input')
-  password.type = 'password'
-  password.placeholder = '密码'
-  password.autocomplete = 'current-password'
-  password.style.cssText = inputStyle('margin-top:10px')
-
-  const error = document.createElement('p')
-  error.setAttribute('role', 'alert')
-  error.style.cssText = ['min-height:18px', 'margin:12px 0 0', 'font-size:12px', 'color:#c0392b'].join(';')
-
-  const submit = document.createElement('button')
-  submit.type = 'submit'
-  submit.textContent = '登 录'
-  submit.style.cssText = [
-    'margin-top:18px',
+  // The desktop shell opens the SSO window at boot; without preload/IPC the
+  // gate cannot reopen it, so the button only restates the hint.
+  const signIn = document.createElement('button')
+  signIn.type = 'button'
+  signIn.textContent = '登 录'
+  signIn.style.cssText = [
     'width:100%',
     'padding:10px 0',
     'border:none',
@@ -111,6 +140,13 @@ function mountGate(baseUrl: string, registerUrl: string): () => void {
     'font-size:15px',
     'cursor:pointer',
   ].join(';')
+
+  const hint = document.createElement('p')
+  hint.setAttribute('role', 'status')
+  hint.style.cssText = ['min-height:18px', 'margin:12px 0 0', 'font-size:12px', 'color:#7a8496'].join(';')
+  signIn.addEventListener('click', () => {
+    hint.textContent = '登录窗口已在桌面打开；若已关闭，请重启应用后再试'
+  })
 
   const register = document.createElement('p')
   register.style.cssText = ['margin:14px 0 0', 'font-size:12px', 'color:#98a1b3'].join(';')
@@ -125,61 +161,11 @@ function mountGate(baseUrl: string, registerUrl: string): () => void {
     register.appendChild(link)
   }
 
-  const form = document.createElement('form')
-  form.append(username, password, error, submit, register)
-  form.addEventListener('submit', (event) => {
-    event.preventDefault()
-    void signIn()
-  })
-
-  card.append(mark, title, subtitle, form)
+  card.append(mark, title, subtitle, signIn, hint, register)
   overlay.appendChild(card)
   document.body.appendChild(overlay)
-
-  async function signIn(): Promise<void> {
-    const name = username.value.trim()
-    if (name === '' || password.value === '') {
-      error.textContent = '请输入账号和密码'
-      return
-    }
-    submit.disabled = true
-    submit.textContent = '登录中…'
-    error.textContent = ''
-    try {
-      const response = await fetch(`${baseUrl}/session`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ username: name, password: password.value }),
-      })
-      const body = (await response.json().catch(() => ({}))) as SessionResponse
-      if (response.ok && body.authenticated === true) {
-        window.location.reload()
-        return
-      }
-      error.textContent = errorMessage(body)
-    } catch {
-      error.textContent = '网络异常，请稍后重试'
-    }
-    submit.disabled = false
-    submit.textContent = '登 录'
-  }
 
   return () => {
     overlay.remove()
   }
-}
-
-function inputStyle(extra = ''): string {
-  return [
-    'width:100%',
-    'box-sizing:border-box',
-    'padding:10px 12px',
-    'border:1px solid #d6dbe4',
-    'border-radius:8px',
-    'font-size:14px',
-    'outline:none',
-    extra,
-  ]
-    .filter(part => part !== '')
-    .join(';')
 }

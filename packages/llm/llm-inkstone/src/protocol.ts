@@ -44,7 +44,8 @@ export interface OrbitTool {
  * identifiers are bare lowercase UUIDs — no `req_`/`inf_` prefixes — and the
  * deployed schema has no `lifecycle_owner` field (the checked-in Go core
  * schema is newer than the service). `chat_id` must reference an existing
- * chat, which the M2 account package creates.
+ * chat; the route creates one per adapter instance through `POST /chat/new`
+ * when the config names none.
  */
 export interface OrbitInferenceRequest {
   readonly protocol_version: typeof INFERENCE_PROTOCOL_VERSION
@@ -129,11 +130,17 @@ function mapBlock(block: ContentBlock): OrbitContentBlock | undefined {
   }
 }
 
+/** Map a BCP-47 locale tag onto the gateway's closed metadata set (`zh` or `en`). */
+export function gatewayLocale(locale: string): 'zh' | 'en' {
+  return locale.toLowerCase().startsWith('zh') ? 'zh' : 'en'
+}
+
 /** Assemble one detached inference request from a fully-built harness call. */
 export function assembleInferenceRequest(
   options: GenerateOptions,
   config: Config,
   ids: { requestId: string; inferenceId: string; chatId: number },
+  modelOverride?: string,
 ): OrbitInferenceRequest {
   const system: string[] = []
   if (options.system !== undefined && options.system !== '') system.push(options.system)
@@ -150,7 +157,8 @@ export function assembleInferenceRequest(
       const text = joinedText((message as { content?: unknown }).content)
       messages.push({
         role: 'user',
-        content: [{ type: 'tool_result', tool_use_id: callId, content: text }],
+        // The gateway requires `is_error` on every tool_result block.
+        content: [{ type: 'tool_result', tool_use_id: callId, is_error: (message as { isError?: boolean }).isError === true, content: text }],
       })
       continue
     }
@@ -175,13 +183,16 @@ export function assembleInferenceRequest(
     chat_id: ids.chatId,
     inference_kind: 'detached',
     inference_id: ids.inferenceId,
-    model: options.model !== '' ? options.model : config.defaultModel,
+    model: modelOverride ?? (options.model !== '' ? options.model : config.defaultModel),
     thinking,
     system,
     messages,
     tools,
     tool_choice: { type: tools.length > 0 ? 'auto' : 'none' },
-    metadata: { locale: config.locale, client_version: APP_IDENTITY.version },
+    // The gateway accepts only `zh` or `en` in metadata.locale (verified
+    // against staging 2026-11-17); the config carries BCP-47 tags such as
+    // `zh-CN` for the SSO page, so the gateway value is mapped here.
+    metadata: { locale: gatewayLocale(config.locale), client_version: APP_IDENTITY.version },
   }
   if (options.maxTokens !== undefined && options.maxTokens > 0) {
     return { ...request, max_output_tokens: options.maxTokens }

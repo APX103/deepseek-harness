@@ -27,6 +27,18 @@ export interface Config {
   readonly requestTimeoutMs: number
 }
 
+/** The SSO OAuth facts the page sign-in URL and callback check read (KEP-0003). */
+export interface InkstoneSsoDeployment {
+  /** OpenXLab SSO origin serving `/authentication`. */
+  readonly ssoOrigin: string
+  /** Registered SSO OAuth client id. */
+  readonly clientId: string
+  /** Client source identifier reported to SSO. */
+  readonly source: string
+  /** Registered redirect URL the SSO gateway sends the `uaa::code::` callback to. */
+  readonly redirectUrl: string
+}
+
 export const Config = z.object({
   authBaseUrl: z
     .string()

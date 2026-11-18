@@ -8,7 +8,8 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
 import type { CredentialProvider, GrantRecord } from '@deepseek-ai/dsh-credentials'
-import type { Config } from './config.ts'
+import { Config } from './config.ts'
+import type { InkstoneSsoDeployment } from './config.ts'
 import { AccountSession } from './session.ts'
 import type { GrantStore, InkstoneAccountState, InkstoneAccountView, StoredGrant } from './session.ts'
 
@@ -21,12 +22,14 @@ declare module '@deepseek-ai/cordis' {
 
 const KEY = credentialKey('inkstone-account', 'default')
 
-function grantStoreOf(ctx: Context): GrantStore | undefined {
-  const provider: CredentialProvider | undefined = ctx.get('credentials')
-  if (provider === undefined) return undefined
+function grantStoreOf(ctx: Context): GrantStore {
+  // Resolve the provider lazily per operation: the service constructor can
+  // run before the credentials provider's fiber has activated, which would
+  // otherwise drop grant persistence for the whole process.
+  const provider = (): CredentialProvider | undefined => ctx.get('credentials')
   return {
     async read(): Promise<StoredGrant | undefined> {
-      const record = await provider.readRecord(KEY)
+      const record = await provider()?.readRecord(KEY)
       if (record === undefined || record.kind !== 'grant') return undefined
       const payload: unknown = record.payload
       if (payload === null || typeof payload !== 'object') return undefined
@@ -35,10 +38,12 @@ function grantStoreOf(ctx: Context): GrantStore | undefined {
       return payload as StoredGrant
     },
     async write(grant: StoredGrant): Promise<void> {
-      await provider.modifyRecord(KEY, () => Promise.resolve({ kind: 'grant', payload: grant }) satisfies Promise<GrantRecord>)
+      const target = provider()
+      if (target === undefined) throw new Error('the credentials provider is unavailable')
+      await target.modifyRecord(KEY, () => Promise.resolve({ kind: 'grant', payload: grant }) satisfies Promise<GrantRecord>)
     },
     async clear(): Promise<void> {
-      await provider.deleteRecord(KEY)
+      await provider()?.deleteRecord(KEY)
     },
   }
 }
@@ -48,45 +53,82 @@ function grantStoreOf(ctx: Context): GrantStore | undefined {
  * sanitized profile, and bearer-JWT resolution for the llm-inkstone route.
  */
 export class InkstoneAccount extends Service {
-  readonly #session: AccountSession
+  static Config = Config
+
+  // TypeScript `private`, not ECMAScript `#`: cordis service calls run with a
+  // shadow `this`, and `#` fields fail the proxy brand check on any method
+  // invoked through `ctx.inkstoneAccount`.
+  private readonly session: AccountSession
+  private readonly config: Config
+  /**
+   * Serialized idempotent grant restores. The constructor attempt usually
+   * loses the race against the credentials provider's asynchronous document
+   * load, so the restore re-runs when that fiber turns ACTIVE
+   * (`internal/service`); every token-reading method awaits the chain, which
+   * keeps cold-boot callers from observing the pre-restore signed-out state.
+   */
+  private restoreChain: Promise<void> = Promise.resolve()
 
   constructor(ctx: Context, config: Config) {
     super(ctx, 'inkstoneAccount')
+    this.config = config
     const fetchImpl = (input: string, init: RequestInit) => fetch(input, init)
-    const store = grantStoreOf(ctx)
-    this.#session = new AccountSession(
-      store === undefined ? { config, fetch: fetchImpl } : { config, fetch: fetchImpl, store },
-    )
-    void this.#session.restore()
+    this.session = new AccountSession({ config, fetch: fetchImpl, store: grantStoreOf(ctx) })
+    this.enqueueRestore()
+    this.restoreChain.catch(() => undefined)
+    ctx.effect(() => ctx.on('internal/service', (name: string) => {
+      if (name === 'credentials') this.enqueueRestore()
+    }), 'inkstone-account: restore when credentials activates')
   }
 
-  /** Current sign-in state without network activity. */
-  state(): InkstoneAccountState {
-    return this.#session.state()
+  /** Queue one idempotent grant restore behind any in-flight one. */
+  private enqueueRestore(): void {
+    this.restoreChain = this.restoreChain.then(() => this.session.restore())
+  }
+
+  /** The SSO OAuth facts the page sign-in URL and callback check read (KEP-0003). */
+  deployment(): InkstoneSsoDeployment {
+    return {
+      ssoOrigin: this.config.ssoOrigin,
+      clientId: this.config.clientId,
+      source: this.config.source,
+      redirectUrl: this.config.redirectUrl,
+    }
+  }
+
+  /** Current sign-in state without network activity; waits for the stored grant restore. */
+  async state(): Promise<InkstoneAccountState> {
+    await this.restoreChain
+    return this.session.state()
   }
 
   /** Sign in with username and password (uaa `byAccount`). */
-  signInWithPassword(username: string, password: string): Promise<InkstoneAccountView> {
-    return this.#session.signInWithPassword(username, password)
+  async signInWithPassword(username: string, password: string): Promise<InkstoneAccountView> {
+    await this.restoreChain
+    return this.session.signInWithPassword(username, password)
   }
 
   /** Complete a browser-based sign-in from its `uaa::code::` grant. */
-  signInWithCode(code: string): Promise<InkstoneAccountView> {
-    return this.#session.signInWithCode(code)
+  async signInWithCode(code: string): Promise<InkstoneAccountView> {
+    await this.restoreChain
+    return this.session.signInWithCode(code)
   }
 
   /** The usable bearer JWT, or `undefined` when signed out or expired. */
-  resolveToken(): Promise<string | undefined> {
-    return this.#session.resolveToken()
+  async resolveToken(): Promise<string | undefined> {
+    await this.restoreChain
+    return this.session.resolveToken()
   }
 
   /** Drop the cached token when a request rejected exactly it. */
-  rejectToken(token: string): Promise<void> {
-    return this.#session.rejectToken(token)
+  async rejectToken(token: string): Promise<void> {
+    await this.restoreChain
+    return this.session.rejectToken(token)
   }
 
   /** Revoke the token server-side and clear the session. */
-  signOut(): Promise<void> {
-    return this.#session.signOut()
+  async signOut(): Promise<void> {
+    await this.restoreChain
+    return this.session.signOut()
   }
 }

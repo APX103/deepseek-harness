@@ -135,7 +135,13 @@ export class AccountSession {
     // failure does not sign out" rule); the account is usable without it.
     const user = await this.#api.getUserInfo(jwt).catch(() => undefined)
     this.#token = { jwt, expiresAtMs, user }
-    await this.#store?.write({ version: 1, token: jwt, ...(user !== undefined ? { user } : {}) }).catch(() => undefined)
+    try {
+      await this.#store?.write({ version: 1, token: jwt, ...(user !== undefined ? { user } : {}) })
+    } catch (cause) {
+      // A persistence failure must not block sign-in, but it is never silent:
+      // without the stored grant the next cold boot starts signed out.
+      console.log('[inkstone-account] persisting the grant failed:', String(cause))
+    }
     return { user, expiresAtMs }
   }
 }

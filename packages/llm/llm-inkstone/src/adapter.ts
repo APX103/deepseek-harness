@@ -86,15 +86,13 @@ function mapFinishReason(stopReason: string, toolCallCount: number): FinishReaso
 /** The Inkstone adapter over the orbit gateway. */
 export class InkstoneAdapter extends LlmAdapter {
   readonly #deps: InkstoneAdapterDeps
-  readonly #chatId: number
+  /** In-flight or settled gateway chat creation; one chat per adapter instance. */
+  #chatIdPromise: Promise<number> | undefined
   #catalog: { entries: readonly InkstoneModelEntry[]; fetchedAt: number } | undefined
 
   constructor(deps: InkstoneAdapterDeps) {
     super()
     this.#deps = deps
-    // One stable chat scope per adapter instance; every call stays a detached
-    // inference under it. E2E against staging confirms the pairing (KEP-0002 M1).
-    this.#chatId = 1 + Math.floor(Math.random() * 2_000_000_000)
   }
 
   override providerInfo(provider: string): LlmProviderInfo {
@@ -118,6 +116,75 @@ export class InkstoneAdapter extends LlmAdapter {
     // LlmResolvedModelInfo carries identity only; the listing's capacities
     // reach the picker through listModels.
     return { provider, id: model, name: entry?.name ?? model }
+  }
+
+  /**
+   * The gateway chat scope for detached inferences: the configured id when
+   * one is set, otherwise one lazily created gateway chat per adapter
+   * instance (`POST /chat/new`, the same bootstrap the Inkstone client
+   * performs). A failed creation leaves no cached promise, so the next call
+   * retries.
+   */
+  async #ensureChatId(config: Config, token: string, fetchImpl: typeof fetch): Promise<number> {
+    if (config.chatId > 0) return config.chatId
+    this.#chatIdPromise ??= this.#createChat(config, token, fetchImpl).catch((error: unknown) => {
+      this.#chatIdPromise = undefined
+      throw error
+    })
+    return this.#chatIdPromise
+  }
+
+  async #createChat(config: Config, token: string, fetchImpl: typeof fetch): Promise<number> {
+    let response: Response
+    try {
+      response = await fetchImpl(joinUrl(config.baseURL, '/chat/new'), {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+          ...attributionHeaders(),
+        },
+        body: JSON.stringify({ scenario: 2, type: 0, provider: 0, agent: 'local_agent' }),
+        redirect: 'error',
+        cache: 'no-store',
+        credentials: 'omit',
+      })
+    } catch (cause) {
+      throw new LlmError('The Inkstone gateway could not be reached.', 'TRANSPORT', { cause })
+    }
+    let envelope: unknown
+    try {
+      envelope = JSON.parse((await response.text()).slice(0, MAX_REJECTION_BYTES)) as unknown
+    } catch {
+      envelope = undefined
+    }
+    if (!response.ok) throw rejectionFailure(response.status, envelope)
+    // The gateway answers every JSON route in a `{code, msg, trace_id, data}`
+    // envelope; the chat id lives on `data` (same unwrap the Inkstone client
+    // performs for `/chat/new`).
+    const record = envelope !== null && typeof envelope === 'object' && !Array.isArray(envelope)
+      ? envelope as Record<string, unknown>
+      : undefined
+    const data = record !== undefined && (record['code'] === 0 || record['code'] === 200) ? record['data'] : undefined
+    const id = data !== null && typeof data === 'object' && !Array.isArray(data) ? (data as Record<string, unknown>)['id'] : undefined
+    if (typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0) {
+      throw new LlmError('The Inkstone gateway returned an invalid chat id.', 'INVALID_RESPONSE', { status: response.status })
+    }
+    return id
+  }
+
+  /**
+   * The gateway rejects detached inference without a concrete model, so the
+   * `auto` alias resolves through the catalog to its canonical route id
+   * (verified against staging 2026-11-17); without a catalog the alias passes
+   * through and the gateway rejection names the field.
+   */
+  async #resolveConcreteModel(model: string): Promise<string> {
+    if (model.trim().toLowerCase() !== 'auto') return model
+    const entries = await this.#catalogEntries()
+    const auto = entries.find(entry => entry.id.toLowerCase() === 'auto')
+    return auto?.canonical ?? model
   }
 
   /**
@@ -149,14 +216,12 @@ export class InkstoneAdapter extends LlmAdapter {
     if (token === undefined) {
       throw new LlmError('Inkstone requires a sign-in through the account provider.', 'ACCOUNT_SIGN_IN_REQUIRED')
     }
+    const fetchImpl = this.#deps.fetchImpl ?? fetch
+    const model = await this.#resolveConcreteModel(options.model !== '' ? options.model : config.defaultModel)
     const request = assembleInferenceRequest(options, config, {
       ...(this.#deps.newIds !== undefined ? this.#deps.newIds() : newInferenceIds()),
-      // A configured chat id points at a real orbit chat; otherwise the random
-      // id only satisfies local validation and the live gateway answers
-      // CHAT_NOT_FOUND until chat bootstrap lands (KEP-0002 M2).
-      chatId: config.chatId > 0 ? config.chatId : this.#chatId,
-    })
-    const fetchImpl = this.#deps.fetchImpl ?? fetch
+      chatId: await this.#ensureChatId(config, token, fetchImpl),
+    }, model)
     let response: Response
     try {
       response = await fetchImpl(joinUrl(config.baseURL, INFERENCE_PATH), {

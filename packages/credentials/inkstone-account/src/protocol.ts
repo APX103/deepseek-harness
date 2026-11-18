@@ -13,6 +13,7 @@ export interface InkstoneUser {
   readonly ssoUid: string
   readonly username: string
   readonly nickname?: string
+  readonly avatar?: string
   readonly email?: string
   readonly phone?: string
 }
@@ -71,11 +72,34 @@ export function sanitizeAuthUser(value: unknown): InkstoneUser {
   const nickname = boundedString(data['nickname'], 160)
   const email = boundedString(data['email'], 320) || boundedString(data['sso_email'], 320)
   const phone = boundedString(data['phone'], 32) || boundedString(data['sso_phone'], 32)
+  const avatar = safeAvatar(data['avatar'])
   return {
     ssoUid,
     username,
     ...(nickname !== '' ? { nickname } : {}),
+    ...(avatar !== undefined ? { avatar } : {}),
     ...(email !== '' ? { email } : {}),
     ...(phone !== '' ? { phone } : {}),
+  }
+}
+
+// The user-center default avatar is a generic placeholder; treating it as
+// absent lets the UI fall back to its initial-letter rendering.
+const DEFAULT_USER_CENTER_AVATAR_ORIGIN = 'https://pjlab-shanghai-moce.oss-cn-shanghai.aliyuncs.com'
+const DEFAULT_USER_CENTER_AVATAR_PATH = '/static/avatar/DefaultAvatar.svg'
+
+/** Validate one profile avatar URL; only https URLs pass, and the user-center default counts as absent. */
+function safeAvatar(value: unknown): string | undefined {
+  const avatar = boundedString(value, 2048)
+  if (avatar === '') return undefined
+  try {
+    const url = new URL(avatar)
+    if (url.protocol !== 'https:') return undefined
+    if (url.origin === DEFAULT_USER_CENTER_AVATAR_ORIGIN && url.pathname === DEFAULT_USER_CENTER_AVATAR_PATH) {
+      return undefined
+    }
+    return url.toString()
+  } catch {
+    return undefined
   }
 }

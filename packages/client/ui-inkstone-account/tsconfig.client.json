@@ -7,11 +7,42 @@
   },
   "files": [
     "src/client/index.ts",
+    "src/client/account-source.ts",
+    "src/client/balance-source.ts",
+    "src/client/InkstoneBalance.tsx",
+    "src/client/InkstoneBrand.tsx",
+    "src/client/InkstoneLauncher.tsx",
+    "src/client/locales.ts",
+    "src/css-modules.d.ts",
     "src/global.ts"
   ],
   "references": [
     {
       "path": "../../../vendor/cordis"
+    },
+    {
+      "path": "../locale/tsconfig.client.json"
+    },
+    {
+      "path": "../ui-primitives"
+    },
+    {
+      "path": "../ui-renderer"
+    },
+    {
+      "path": "../ui-settings/tsconfig.client.json"
+    },
+    {
+      "path": "../ui-settings-models"
+    },
+    {
+      "path": "../ui-sidebar"
+    },
+    {
+      "path": "../ui-slots"
+    },
+    {
+      "path": "../../credentials/inkstone-account"
     }
   ]
 }

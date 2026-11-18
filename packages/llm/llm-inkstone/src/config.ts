@@ -12,6 +12,8 @@ import z from '@deepseek-ai/schemastery'
 /** One static catalog entry offered by the route. */
 export interface InkstoneModelEntry {
   readonly id: string
+  /** Canonical route id the gateway resolves aliases against; `id` for concrete rows. */
+  readonly canonical?: string
   readonly name: string
   readonly contextWindow: number
   readonly maxTokens: number
@@ -23,8 +25,8 @@ export interface Config {
   readonly baseURL: string
   /**
    * Existing orbit chat id for `/local-agent/messages`; the gateway requires a
-   * pre-created local-agent chat. `0` uses a random id, which the live gateway
-   * rejects with CHAT_NOT_FOUND until M2 lands chat bootstrap.
+   * pre-created local-agent chat. `0` lets the route create one chat per
+   * adapter instance through `POST /chat/new` (the Inkstone client bootstrap).
    */
   readonly chatId: number
   /** Model id sent when the caller names none; the gateway's `auto` routes by task. */
@@ -33,7 +35,7 @@ export interface Config {
   readonly thinking: boolean
   /** Thinking budget in tokens; `0` leaves the field unset. */
   readonly thinkingBudgetTokens: number
-  /** Locale reported in gateway metadata. */
+  /** BCP-47 locale for client surfaces (the SSO page `lang`, and the gateway metadata mapped to `zh`/`en`). */
   readonly locale: string
   /** How long one gateway model listing stays fresh; `0` refreshes on every access. */
   readonly catalogMaxAgeMs: number

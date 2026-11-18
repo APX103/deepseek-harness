@@ -10,13 +10,13 @@ import type { OrbitSseEvent } from '../src/protocol.ts'
 
 const settings: Config = {
   baseURL: 'https://gw.example/api/orbit/v1',
-  chatId: 0,
+  chatId: 4242,
   defaultModel: 'auto',
   thinking: false,
   thinkingBudgetTokens: 0,
   locale: 'zh-CN',
   catalogMaxAgeMs: 0,
-  models: [{ id: 'auto', name: 'Inkstone Auto', contextWindow: 131072, maxTokens: 8192 }],
+  models: [{ id: 'auto', name: 'Inkstone Auto', canonical: 'qwen3.7-plus', contextWindow: 131072, maxTokens: 8192 }],
 }
 
 type FetchMock = ReturnType<typeof vi.fn>
@@ -163,9 +163,10 @@ describe('inkstone request assembly', () => {
     expect(body['protocol_version']).toBe('2.0')
     expect(body['inference_kind']).toBe('detached')
     expect(body['chat_id']).toBeGreaterThan(0)
+    expect(body['metadata']).toEqual({ locale: 'zh', client_version: expect.any(String) })
     expect(String(body['request_id'])).toMatch(/^[0-9a-f-]{36}$/)
     expect(String(body['inference_id'])).toMatch(/^[0-9a-f-]{36}$/)
-    expect(body['model']).toBe('auto')
+    expect(body['model']).toBe('qwen3.7-plus')
     expect(body['system']).toEqual(['Be brief.'])
     expect(body['messages']).toEqual([{ role: 'user', content: [{ type: 'text', text: 'hi' }] }])
     expect(body['tools']).toEqual([{ name: 'get_weather', description: 'weather', input_schema: { type: 'object' } }])
@@ -189,8 +190,80 @@ describe('inkstone request assembly', () => {
     expect(body.messages).toEqual([
       { role: 'user', content: [{ type: 'text', text: 'weather?' }] },
       { role: 'assistant', content: [{ type: 'tool_use', id: 't9', name: 'get_weather', input: { city: 'sh' } }] },
-      { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't9', content: 'sunny' }] },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't9', is_error: false, content: 'sunny' }] },
     ])
+  })
+})
+
+describe('inkstone model resolution', () => {
+  it('resolves the auto alias to the catalog canonical model', async () => {
+    const fetchImpl = vi.fn(async () =>
+      sseResponse([{ type: 'message_end', stop_reason: 'stop' }]))
+    await collect(baseOptions, fetchImpl)
+    const body = JSON.parse((lastCall(fetchImpl).init.body ?? '') as string) as Record<string, unknown>
+    expect(body['model']).toBe('qwen3.7-plus')
+  })
+
+  it('passes a concrete model id through unchanged', async () => {
+    const fetchImpl = vi.fn(async () =>
+      sseResponse([{ type: 'message_end', stop_reason: 'stop' }]))
+    await collect({ ...baseOptions, model: '书生-A1.5' } as GenerateOptions, fetchImpl)
+    const body = JSON.parse((lastCall(fetchImpl).init.body ?? '') as string) as Record<string, unknown>
+    expect(body['model']).toBe('书生-A1.5')
+  })
+})
+
+describe('inkstone chat bootstrap', () => {
+  const bootstrapSettings: Config = { ...settings, chatId: 0 }
+
+  function bootstrapFetch(): FetchMock {
+    return vi.fn(async (input: unknown) => {
+      const url = String(input)
+      if (url.endsWith('/chat/new')) return jsonResponse({ code: 0, data: { id: 778899 } }, 200)
+      return sseResponse([{ type: 'message_end', stop_reason: 'stop' }])
+    })
+  }
+
+  it('creates one gateway chat and reuses it across streams', async () => {
+    const fetchImpl = bootstrapFetch()
+    const adapter = new InkstoneAdapter({ settings: () => bootstrapSettings, resolveToken: () => 'jwt-token', fetchImpl: fetchImpl as unknown as typeof fetch })
+    for (let i = 0; i < 2; i += 1) {
+      for await (const _chunk of adapter.stream(baseOptions)) {
+        // drain
+      }
+    }
+    const calls = fetchImpl.mock.calls.map(call => String(call[0]))
+    expect(calls.filter(url => url.endsWith('/chat/new'))).toHaveLength(1)
+    expect(calls.filter(url => url.endsWith('/local-agent/messages'))).toHaveLength(2)
+    const createInit = (fetchImpl.mock.calls.find(call => String(call[0]).endsWith('/chat/new'))?.[1] ?? {}) as RequestInit
+    expect(JSON.parse((createInit.body ?? '') as string)).toEqual({ scenario: 2, type: 0, provider: 0, agent: 'local_agent' })
+    const messageBody = JSON.parse((lastCall(fetchImpl).init.body ?? '') as string) as Record<string, unknown>
+    expect(messageBody['chat_id']).toBe(778899)
+  })
+
+  it('maps a chat creation rejection and retries after a failure', async () => {
+    let failures = 1
+    const fetchImpl = vi.fn(async (input: unknown) => {
+      if (String(input).endsWith('/chat/new')) {
+        if (failures > 0) {
+          failures -= 1
+          return jsonResponse({ code: '429001' }, 429)
+        }
+        return jsonResponse({ code: 0, data: { id: 778899 } }, 200)
+      }
+      return sseResponse([{ type: 'message_end', stop_reason: 'stop' }])
+    })
+    const adapter = new InkstoneAdapter({ settings: () => bootstrapSettings, resolveToken: () => 'jwt-token', fetchImpl: fetchImpl as unknown as typeof fetch })
+    await expect(async () => {
+      for await (const _chunk of adapter.stream(baseOptions)) {
+        // drain
+      }
+    }).rejects.toMatchObject({ code: 'RATE_LIMIT' })
+    for await (const _chunk of adapter.stream(baseOptions)) {
+      // drain — the retry creates a fresh chat
+    }
+    const createCalls = fetchImpl.mock.calls.filter(call => String(call[0]).endsWith('/chat/new'))
+    expect(createCalls).toHaveLength(2)
   })
 })
 

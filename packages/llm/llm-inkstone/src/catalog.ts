@@ -73,7 +73,8 @@ export async function fetchGatewayCatalog(
     const maxTokens = positiveInt(row['max_output_tokens'])
     if (contextWindow === undefined || maxTokens === undefined) return []
     const name = boundedText(row['display_name'], 200)
-    return [{ id, name: name === '' ? id : name, contextWindow, maxTokens }]
+    const canonical = boundedText(row['canonical_id'], 120)
+    return [{ id, name: name === '' ? id : name, contextWindow, maxTokens, ...(canonical !== '' ? { canonical } : {}) }]
   })
   if (entries.length === 0) {
     throw new Error('the gateway model listing carried no usable models')

@@ -6,7 +6,9 @@
  * The endpoint binds 127.0.0.1 on an OS-assigned port under an unguessable
  * path token; the injected `INKSTONE_ACCOUNT` global carries `{ baseUrl,
  * registerUrl }` for the client gate in `./client`. This replaces every
- * upstream DeepSeek account surface in the composition.
+ * upstream DeepSeek account surface in the composition. KEP-0003 adds
+ * `GET /session/sso` (the SSO login page URL) and `POST /session/code` (a
+ * `uaa::code::` exchange) for the desktop shell's page sign-in window.
  *
  * @module dsh-client-ui-inkstone-account
  */
@@ -15,12 +17,16 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-inkstone-account'
+import type {} from '@deepseek-ai/dsh-inkstone-token-plan'
 import { Config } from './config.ts'
 import { INKSTONE_ACCOUNT_GLOBAL } from './global.ts'
+import { buildSsoLoginUrl } from './sso-url.ts'
 
 export { Config } from './config.ts'
-export type { Config as InkstoneAccountUiConfig } from './config.ts'
+export type { Config as InkstoneAccountUiConfig, SsoLocale } from './config.ts'
 export { INKSTONE_ACCOUNT_GLOBAL } from './global.ts'
+export { buildSsoLoginUrl, readSsoCallbackCode } from './sso-url.ts'
+export type { SsoDeployment } from './sso-url.ts'
 
 export const name = 'ui-inkstone-account'
 export const inject = ['inkstoneAccount', 'webServer']
@@ -69,13 +75,52 @@ async function handleSessionRequest(
     return
   }
   const url = new URL(request.url ?? '/', 'http://127.0.0.1')
-  if (url.pathname !== `/${pathToken}/session`) {
+  const prefix = `/${pathToken}`
+  const route = url.pathname.startsWith(prefix) ? url.pathname.slice(prefix.length) : undefined
+  if (route !== '/session' && route !== '/session/sso' && route !== '/session/code' && route !== '/session/balance') {
     response.writeHead(404, { 'content-type': 'application/json' }).end('{"error":"not found"}')
     return
   }
   try {
+    if (route === '/session/sso') {
+      if (request.method !== 'GET') throw new MethodNotAllowed(request.method)
+      // A misconfigured redirectUrl (not an ampersand-free https URL) fails the
+      // request here rather than handing the desktop an unusable login page.
+      const deployment = ctx.inkstoneAccount.deployment()
+      const loginUrl = buildSsoLoginUrl(deployment, config.locale)
+      // The desktop recognizes the callback with `redirectUrl` alone.
+      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ loginUrl, redirectUrl: deployment.redirectUrl }))
+      return
+    }
+    if (route === '/session/code') {
+      if (request.method !== 'POST') throw new MethodNotAllowed(request.method)
+      const body = await readJsonBody(request)
+      const code = typeof body['code'] === 'string' ? body['code'] : ''
+      if (code === '') {
+        response.writeHead(400, { 'content-type': 'application/json' }).end('{"code":"BAD_REQUEST","message":"缺少登录凭证"}')
+        return
+      }
+      const view = await ctx.inkstoneAccount.signInWithCode(code)
+      response.writeHead(200, { 'content-type': 'application/json' }).end(
+        JSON.stringify({ authenticated: true, user: view.user, expiresAtMs: view.expiresAtMs, registerUrl: config.registerUrl }),
+      )
+      return
+    }
+    if (route === '/session/balance') {
+      if (request.method !== 'GET') throw new MethodNotAllowed(request.method)
+      // Optional composition member: without the Token Plan service the route
+      // is absent rather than an error, and the client hides the row.
+      const plan = ctx.get('inkstoneTokenPlan')
+      if (plan === undefined) {
+        response.writeHead(404, { 'content-type': 'application/json' }).end('{"error":"not found"}')
+        return
+      }
+      const balance = await plan.balance()
+      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ credits: balance.credits }))
+      return
+    }
     if (request.method === 'GET') {
-      const state = ctx.inkstoneAccount.state()
+      const state = await ctx.inkstoneAccount.state()
       response.writeHead(200, { 'content-type': 'application/json' }).end(
         JSON.stringify({ authenticated: state.authenticated, user: state.user, expiresAtMs: state.expiresAtMs }),
       )
@@ -100,12 +145,24 @@ async function handleSessionRequest(
       )
       return
     }
-    response.writeHead(405, { 'content-type': 'application/json' }).end('{"error":"method not allowed"}')
+    throw new MethodNotAllowed(request.method)
   } catch (error) {
+    if (error instanceof MethodNotAllowed) {
+      response.writeHead(405, { 'content-type': 'application/json' }).end('{"error":"method not allowed"}')
+      return
+    }
     const code = (error as { code?: string }).code ?? 'AUTH_REJECTED'
     const message = error instanceof Error ? error.message : '登录失败'
     const status = code.startsWith('AUTH_') ? 401 : 500
     response.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify({ code, message }))
+  }
+}
+
+/** Marker for a wrong method on a known route, rendered as `405` by the request handler. */
+class MethodNotAllowed extends Error {
+  constructor(method: string | undefined) {
+    super(`method ${method ?? 'unknown'} not allowed`)
+    this.name = 'MethodNotAllowed'
   }
 }
 

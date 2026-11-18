@@ -2,13 +2,13 @@
  * The Inkstone (端砚) Token Plan plugin: 墨点 balance, free-grant, and
  * credit-increase operations over the platform API, authenticated by the
  * inkstone account service (KEP-0002 M3). The default export is the Cordis
- * service class, so a bundle row loads this package directly.
+ * service class, so a bundle row loads this package directly and the class
+ * constructor resolves its identity from `ctx.inkstoneAccount` (tests and
+ * embeddings inject their own sources through `InkstoneTokenPlanDeps`).
  *
  * @module dsh-inkstone-token-plan
  */
-import { Context } from '@deepseek-ai/cordis'
 import { InkstoneTokenPlan } from './service.ts'
-import { Config } from './config.ts'
 
 export { Config } from './config.ts'
 export type { Config as InkstoneTokenPlanConfig } from './config.ts'
@@ -25,27 +25,6 @@ export type {
 } from './client.ts'
 export { formatInkstoneCredits } from './format.ts'
 export { InkstoneTokenPlan } from './service.ts'
-export type { InkstoneTokenPlanDeps } from './service.ts'
-
-export const name = 'inkstone-token-plan'
-
-export function apply(ctx: Context, config: Config): void {
-  const account = () =>
-    ctx.get('inkstoneAccount') as
-      | { resolveToken?: () => Promise<string | undefined>; state?: () => { user?: { ssoUid?: string } } }
-      | undefined
-  ctx.set(
-    'inkstoneTokenPlan',
-    new InkstoneTokenPlan(ctx, config, {
-      resolveToken: async () => {
-        // D8 (KEP-0002): login-gated — the account service is the sole token
-        // source; no environment fallback exists.
-        const fromService = await account()?.resolveToken?.()
-        return fromService === '' ? undefined : fromService
-      },
-      resolveSsoUid: () => account()?.state?.().user?.ssoUid,
-    }),
-  )
-}
+export type { InkstoneTokenPlanDeps, TokenPlanIdentitySource, TokenPlanTokenSource } from './service.ts'
 
 export default InkstoneTokenPlan

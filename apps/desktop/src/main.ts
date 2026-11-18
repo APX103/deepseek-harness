@@ -49,6 +49,7 @@ import { pruneCrashReports, RendererConsoleTail, writeCrashReport, type CrashRep
 import { OperationJournal } from './operation-journal.ts'
 import { runOperationReportJob, type OperationReportJobResult } from './operation-report-job.ts'
 import { openWelcomeWindow } from './welcome-window.ts'
+import { ensureSignedIn } from './inkstone-sign-in.ts'
 import { WELCOME_IPC, needsWelcome, type WelcomeNotice } from './welcome-api.ts'
 import { connectDesktopWelcome, type DesktopWelcomeBackend } from './welcome-backend.ts'
 import { DesktopUpdateJournal } from './update-journal.ts'
@@ -1469,6 +1470,14 @@ async function main(): Promise<void> {
     writeDesktopLocaleCache(app.getPath('userData'), locale.id)
     windowsLanguage = locale.id
     refreshApplicationMenu()
+    if (!enteredWorkspace) {
+      // KEP-0003: sign-in gates the workspace. A cancelled or failed attempt
+      // still enters; the client gate then explains the state in place.
+      await ensureSignedIn(injections).catch((error: unknown) => {
+        console.error('desktop: inkstone sign-in failed', error)
+        return 'unavailable' as const
+      })
+    }
     if (!enteredWorkspace && needsWelcome({ loggedIn: state.loggedIn, hasApiKey: state.hasApiKey })) {
       // A later login must retain its own activation policy instead of replaying startup focus.
       raiseAfterUpdate = false

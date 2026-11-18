@@ -13,6 +13,7 @@ import { InkstoneAccount } from './service.ts'
 
 export { Config } from './config.ts'
 export type { Config as InkstoneAccountConfig } from './config.ts'
+export type { InkstoneSsoDeployment } from './config.ts'
 export { InkstoneAccountError } from './errors.ts'
 export type { InkstoneAccountErrorCode } from './errors.ts'
 export { jwtExpiresAtMs, requireUnexpiredJwt } from './jwt.ts'
