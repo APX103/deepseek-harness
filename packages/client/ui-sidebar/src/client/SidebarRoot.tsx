@@ -22,7 +22,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import clsx from 'clsx'
 import {
-  FishLogo, IconAppsAddOutlineRegular, IconNewChatOutlineMedium, IconNewChatOutlineRegular,
+  FishLogo, IconAppsAddOutlineRegular, IconLinkOutlineRegular, IconNewChatOutlineMedium, IconNewChatOutlineRegular,
   IconPanelLeftOutlineRegular, IconPinFillRegular, focusWithoutRing, isBehindModal, isDarwinDesktop, Menu, ShortcutKeys, Toast,
   Tooltip, useModalLayer, writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -156,11 +156,13 @@ export function SidebarRoot({
   useEntryActions,
   useShortcuts,
   usePanelInfo,
+  useNavLinks,
   t,
   renderSlot,
   renderFactorySlot,
 }: SidebarRootComponentProps) {
   const panels = usePanels(snapshot => snapshot)
+  const navLinks = useNavLinks(snapshot => snapshot)
   const unpinned = useEntryPins(ids => ids)
   const activePanelId = usePanelInfo(info => info.activePanelId)
   const hasEntryActions = useEntryActions(registered => registered)
@@ -414,6 +416,32 @@ export function SidebarRoot({
                   renderSlot={renderSlot}
                 />
               )}
+            </nav>
+          )}
+          {/* Platform-web links (论文工具 / 科研应用, KEP-0008): plain
+              external anchors styled as panel rows; the rail shows the
+              glyph only. Their own nav landmark keeps the panels list's
+              label honest. */}
+          {navLinks.length > 0 && (
+            <nav className={css.linkList} aria-label={t('links.label')}>
+              {navLinks.map(({ id, label, href }) => (
+                <Tooltip key={id} label={label} delayMs={500} side={captionTooltipSide} disabled={wide} portal={drawer}>
+                  <a
+                    className={clsx(css.panelEntry, wide && css.panelEntryWide)}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                  >
+                    <span className={clsx(css.panelRow, css.linkRow)}>
+                      <span className={css.panelGlyph} aria-hidden="true">
+                        <IconLinkOutlineRegular size={wide ? 16 : 18} />
+                      </span>
+                      {wide && <span className={clsx(css.panelTitle, css.wide)}>{label}</span>}
+                    </span>
+                  </a>
+                </Tooltip>
+              ))}
             </nav>
           )}
           <div className={css.regionArea}>

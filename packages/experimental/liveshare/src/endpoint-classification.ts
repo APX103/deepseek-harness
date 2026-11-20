@@ -46,6 +46,7 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'productAnalytics/enabled': 'reader-global-read', // the page asks whether this host accepts analytics
   'productAnalytics/report': 'reader-global-read', // the page reports its own product events
   'productAnalytics/watchPolicy': 'reader-global-read', // the page follows the analytics policy
+  'researchCatalog/links': 'reader-global-read', // the sidebar reads the deployment's public platform-web links
   'speech/cancelPreparation': 'reader-global-read', // the page cancels its recognizer preparation
   'speech/catalog': 'reader-global-read', // the page reads recorder providers and limits
   'speech/follow': 'reader-global-read', // the page follows recognizer readiness

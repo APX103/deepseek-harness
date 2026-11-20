@@ -585,7 +585,7 @@
   min-height: 0;
   display: grid;
   grid-template-columns: 4px minmax(0, 1fr) calc(var(--dsh-sidebar-inline-padding) - 2px);
-  grid-template-rows: 8px max-content 2px max-content;
+  grid-template-rows: 8px max-content max-content 2px max-content;
   align-content: start;
   margin-left: -4px;
   margin-right: calc(2px - var(--dsh-sidebar-inline-padding));
@@ -614,7 +614,7 @@
 }
 
 .scrollArea::before { grid-row: 1; }
-.scrollArea::after { grid-row: 3; }
+.scrollArea::after { grid-row: 4; }
 
 .scrollFade {
   position: absolute;
@@ -667,6 +667,19 @@
   background: transparent;
 }
 
+/* External nav-link rows (KEP-0008): the anchor replaces the panel button —
+   no link styling of its own — and carries no unpin seat, so the row keeps
+   the plain padding instead of the wide row's 38px unpin clearance. */
+a.panelEntry {
+  color: inherit;
+  text-decoration: none;
+}
+
+.panelEntry .linkRow {
+  width: 100%;
+  padding-right: calc(var(--dsh-sidebar-row-padding) - var(--dsh-sidebar-paint-inset));
+}
+
 .panelEntryActive,
 .panelEntry:has(:focus-visible) {
   background-color: var(--dsw-alias-interactive-bg-hover);
@@ -706,6 +719,23 @@
 .panelList {
   grid-column: 2;
   grid-row: 2;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+/* While the links list follows, it owns the gap under the panel list. */
+.panelList:has(+ .linkList) {
+  margin-bottom: 0;
+}
+
+/* External platform-web links (论文工具 / 科研应用, KEP-0008) sit directly
+   under the panel list, in their own grid row with the list's row gap. */
+.linkList {
+  grid-column: 2;
+  grid-row: 3;
   flex: none;
   display: flex;
   flex-direction: column;
@@ -798,7 +828,7 @@
 /* The workspace seat stays mounted while its wide and rail bodies change. */
 .regionArea {
   grid-column: 2;
-  grid-row: 4;
+  grid-row: 5;
   min-height: 0;
   min-width: 0;
   display: flex;

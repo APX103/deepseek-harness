@@ -150,6 +150,7 @@
     { "path": "./packages/client/ui-connector-account/tsconfig.client.json" },
     { "path": "./packages/client/ui-model-selection" },
     { "path": "./packages/client/ui-agent-preset" },
+    { "path": "./packages/client/ui-research-plugins/tsconfig.client.json" },
     { "path": "./packages/client/ui-permission-presets" },
     { "path": "./packages/client/ui-plan" },
     { "path": "./packages/client/ui-settings-shell" },

@@ -1648,6 +1648,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-plugin-manager':
         specifier: workspace:*
         version: link:../../client/ui-plugin-manager
+      '@deepseek-ai/dsh-client-ui-research-plugins':
+        specifier: workspace:*
+        version: link:../../client/ui-research-plugins
       '@deepseek-ai/dsh-client-ui-session-status':
         specifier: workspace:*
         version: link:../../client/ui-session-status
@@ -3257,6 +3260,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:*
         version: link:../../client/ui-renderer
+      '@deepseek-ai/dsh-client-ui-research-plugins':
+        specifier: workspace:*
+        version: link:../../client/ui-research-plugins
       '@deepseek-ai/dsh-client-ui-schedule':
         specifier: workspace:*
         version: link:../../client/ui-schedule
@@ -5978,6 +5984,58 @@ importers:
       use-sync-external-store:
         specifier: 1.6.0
         version: 1.6.0(react@18.3.1)
+
+  packages/client/ui-research-plugins:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-api-remotes':
+        specifier: workspace:*
+        version: link:../../api/remotes
+      '@deepseek-ai/dsh-client-locale':
+        specifier: workspace:*
+        version: link:../locale
+      '@deepseek-ai/dsh-client-store':
+        specifier: workspace:*
+        version: link:../store
+      '@deepseek-ai/dsh-client-test-runtime':
+        specifier: workspace:*
+        version: link:../../test-support/client-runtime
+      '@deepseek-ai/dsh-client-ui-layout':
+        specifier: workspace:*
+        version: link:../ui-layout
+      '@deepseek-ai/dsh-client-ui-primitives':
+        specifier: workspace:*
+        version: link:../ui-primitives
+      '@deepseek-ai/dsh-client-ui-renderer':
+        specifier: workspace:*
+        version: link:../ui-renderer
+      '@deepseek-ai/dsh-client-ui-sidebar':
+        specifier: workspace:*
+        version: link:../ui-sidebar
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:*
+        version: link:../ui-slots
+      '@deepseek-ai/dsh-typert-protocol':
+        specifier: workspace:*
+        version: link:../../typert/protocol
+      '@testing-library/react':
+        specifier: ^16.3.3
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.3.1(react@18.3.1)
 
   packages/client/ui-schedule:
     devDependencies:

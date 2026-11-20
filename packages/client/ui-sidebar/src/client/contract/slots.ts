@@ -48,6 +48,13 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     /** Rows of the panel list's More menu; the sidebar shows More only while this list has registrations. */
     'sidebar.panellist.actions': { kind: 'list'; scope: 'root'; owner: SidebarPanelActionsOwnerProps }
     /**
+     * Platform-web link rows under the panel list (论文工具 / 科研应用, KEP-0008).
+     * The sidebar renders each entry from its registration options — no
+     * component — and opens `href` externally, so the rows stay declarative
+     * and the column's collapsed/expanded states stay sidebar-owned.
+     */
+    'sidebar.nav.links': { kind: 'list'; scope: 'root'; owner: SidebarNavLinksOwnerProps }
+    /**
      * The workspace/session browsing region: section header, search, the
      * grouped/flat session list, and every workspace dialog. Declared by this
      * package's 'sidebar' entry (declaring is claiming); ui-workspace
@@ -115,6 +122,24 @@ export interface SidebarPanelMetadata {
   order: number
   /** Row title and accessible name: resolved label, or the id when omitted. */
   label: string
+}
+
+/** Serializable metadata for one external nav-link row (registration options). */
+export interface SidebarNavLinksMetadata {
+  /** Stable row id (analytics, tests). */
+  id: string
+  /** Ascending row order; ties retain registration order. */
+  order: number
+  /** Row title and accessible name. */
+  label: string
+  /** Where the row opens, resolved for the current deployment (staging/production is config, not UI). */
+  href: string
+}
+
+/** Owner share of the sidebar nav-link rows. */
+export interface SidebarNavLinksOwnerProps {
+  /** Whether the sidebar renders wide content (false = 56px rail). */
+  wide: boolean
 }
 
 /** One customizable panel launcher listed in the More menu. */
@@ -232,6 +257,8 @@ export type SidebarRootInjected = {
   /** Private reactive sources bound to framework selector hooks. */
   hooks: {
     panels: ObservableSnapshot<readonly SidebarPanelMetadata[]>
+    /** External nav-link rows (论文工具 / 科研应用), sorted for rendering. */
+    navLinks: ObservableSnapshot<readonly SidebarNavLinksMetadata[]>
     shortcuts: ObservableSnapshot<readonly ShortcutCatalogEntry[]>
     /** Ids of unpinned panel launchers held in memory until plugin reload. */
     entryPins: ObservableSnapshot<readonly string[]>
@@ -252,6 +279,7 @@ export type SidebarRootComponentProps =
     | 'sidebar.brand.name'
     | 'sidebar.toggle.badge'
     | 'sidebar.panellist.actions'
+    | 'sidebar.nav.links'
     | 'sidebar.workspaces'
     | 'sidebar.settings'
     | 'sidebar.footer.action'

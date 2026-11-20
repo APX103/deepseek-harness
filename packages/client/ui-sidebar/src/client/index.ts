@@ -10,7 +10,9 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 // Type-only: pulls the Session root standard-props merge.
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
-import type { SidebarPanelMetadata, SidebarRootInjected, SidebarSectionInjected } from './contract/slots.ts'
+import type {
+  SidebarNavLinksMetadata, SidebarPanelMetadata, SidebarRootInjected, SidebarSectionInjected,
+} from './contract/slots.ts'
 import { createPanelPins } from './panel-pins.ts'
 import { HeaderLeadingControls } from './HeaderLeadingControls.tsx'
 import { SidebarRoot } from './SidebarRoot.tsx'
@@ -19,6 +21,7 @@ import { en, ja, es, fr, de, ru, pt, zh, type SidebarKey } from './locales.ts'
 
 export type {
   SidebarBrandMarkOwnerProps, SidebarBrandNameOwnerProps, SidebarFooterActionOwnerProps,
+  SidebarNavLinksMetadata, SidebarNavLinksOwnerProps,
   SidebarPanelActionEntry, SidebarPanelActionsOwnerProps, SidebarPanelIconOwnerProps, SidebarPanelMetadata,
   SidebarRootComponentProps, SidebarRootInjected, SidebarSectionOwnerProps, SidebarSessionActionOwnerProps,
   SidebarSettingsOwnerProps, SectionScroller, SidebarSectionHookContext, SidebarSectionInjected, UseSectionScroller,
@@ -69,6 +72,31 @@ export function apply(ctx: ClientContext): void {
   }
   ctx.effect(() => ctx.slots.subscribe('sidebar.panellist', syncPanels), 'ui-sidebar: panel entries')
   ctx.effect(() => ctx.locale.subscribe(syncPanels), 'ui-sidebar: panel labels')
+  // External nav-link rows (论文工具 / 科研应用, KEP-0008): metadata-only
+  // registrations; the sidebar renders the rows and opens `href` itself.
+  const navLinks = createSnapshotStore<readonly SidebarNavLinksMetadata[]>([])
+  const syncNavLinks = (): void => {
+    const next = ctx.slots.entriesOfSlot('sidebar.nav.links').map((entry) => {
+      // The destination rides the entry `inject` face (the ledger projects
+      // options onto its own vocabulary, so href cannot sit beside them); the
+      // sidebar reads its own shape off the face the registrant supplies.
+      const face = typeof entry.inject === 'function' ? entry.inject() as Partial<SidebarNavLinksMetadata> : undefined
+      return {
+        id: String(entry.options.id),
+        order: entry.options.order ?? 0,
+        label: resolveSlotLabel(entry.options.label) ?? String(entry.options.id),
+        href: String(face?.href ?? ''),
+      }
+    }).filter(link => link.href !== '').sort((a, b) => a.order - b.order)
+    const previous = navLinks.getSnapshot()
+    if (previous.length === next.length && previous.every((link, index) => {
+      const candidate = next[index] as SidebarNavLinksMetadata
+      return link.id === candidate.id && link.order === candidate.order && link.label === candidate.label && link.href === candidate.href
+    })) return
+    navLinks.set(next)
+  }
+  ctx.effect(() => ctx.slots.subscribe('sidebar.nav.links', syncNavLinks), 'ui-sidebar: nav-link entries')
+  ctx.effect(() => ctx.locale.subscribe(syncNavLinks), 'ui-sidebar: nav-link labels')
   const panelPins = createPanelPins()
   const entryActions = {
     getSnapshot: () => ctx.slots.entriesOfSlot('sidebar.panellist.actions').length > 0,
@@ -83,7 +111,7 @@ export function apply(ctx: ClientContext): void {
     selectPanel: (id) => { ctx.layout.selectPanel(id) },
     setPinned: panelPins.setPinned,
     trackEntryClick: (attributes) => { ctx.get('productAnalytics')?.track('sidebar_menu_click', attributes) },
-    hooks: { panels, shortcuts: ctx.shortcuts.catalog, entryPins: panelPins.unpinned, entryActions },
+    hooks: { panels, navLinks, shortcuts: ctx.shortcuts.catalog, entryPins: panelPins.unpinned, entryActions },
   })
   ctx.slots.inject('sidebar', function* () {
     yield ctx.slots.registerFactory({
@@ -98,6 +126,7 @@ export function apply(ctx: ClientContext): void {
         'sidebar.brand.name': { kind: 'single', scope: 'root' },
         'sidebar.toggle.badge': { kind: 'single', scope: 'root' },
         'sidebar.panellist.actions': { kind: 'list', scope: 'root' },
+        'sidebar.nav.links': { kind: 'list', scope: 'root' },
         'sidebar.workspaces': { kind: 'single', scope: 'root', inject: SIDEBAR_SECTION_INJECT },
         'sidebar.settings': { kind: 'single', scope: 'root' },
         'sidebar.footer.action': { kind: 'list', scope: 'root' },

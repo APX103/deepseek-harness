@@ -486,6 +486,12 @@
     - id: ui-agent-preset
       name: '@deepseek-ai/dsh-client-ui-agent-preset'
 
+    # Research capabilities (KEP-0008): the sidebar's platform-web rows
+    # (论文工具 / 科研应用) and the 科研插件 catalog page. Absent the Host
+    # Remote the rows are skipped.
+    - id: ui-research-plugins
+      name: '@deepseek-ai/dsh-client-ui-research-plugins'
+
     # Region-local More menus: pin or unpin plugin launchers and start a
     # plugin draft.
     - id: entry-customization

@@ -9,9 +9,8 @@ import { allowAllAccess, makeTranslate } from '@deepseek-ai/dsh-client-test-runt
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import type {
-  SidebarFooterActionOwnerProps, SidebarPanelMetadata, SidebarRootComponentProps, SidebarSectionHookContext, SidebarSectionOwnerProps,
-  SidebarSessionActionOwnerProps,
-  SidebarSettingsOwnerProps,
+  SidebarFooterActionOwnerProps, SidebarNavLinksMetadata, SidebarPanelMetadata, SidebarRootComponentProps,
+  SidebarSectionHookContext, SidebarSectionOwnerProps, SidebarSessionActionOwnerProps, SidebarSettingsOwnerProps,
 } from '../src/client/contract/slots.ts'
 import { HeaderLeadingControls, type HeaderLeadingControlsProps } from '../src/client/HeaderLeadingControls.tsx'
 import { SidebarRoot } from '../src/client/SidebarRoot.tsx'
@@ -44,19 +43,20 @@ function makeHeaderProps(): HeaderLeadingControlsProps {
     useContextMenu: contextMenuHook(),
     useSessions: neverHook, useSessionStatus, useSessionRetainInfo: neverHook,
     usePanelInfo, useResource, useWorkspaces: neverHook, ...allowAllAccess,
-    usePanels: selector => selector([]), useShortcuts: selector => selector([]),
+    usePanels: selector => selector([]), useNavLinks: selector => selector([]), useShortcuts: selector => selector([]),
     useEntryPins: selector => selector([]), useEntryActions: selector => selector(false),
     selectPanel: vi.fn(), setPinned: vi.fn(), toggleSidebar: vi.fn(),
     startSession: vi.fn(), trackEntryClick: vi.fn(), t,
   }
 }
 
-function mountShell({ collapsed = false, width = 300, drawer = false, shortcuts = [], panels = [], content }: {
+function mountShell({ collapsed = false, width = 300, drawer = false, shortcuts = [], panels = [], navLinks, content }: {
   collapsed?: boolean
   width?: number
   drawer?: boolean
   shortcuts?: readonly ShortcutCatalogEntry[]
   panels?: readonly SidebarPanelMetadata[]
+  navLinks?: readonly SidebarNavLinksMetadata[]
   content?: ReactNode
 } = {}) {
   const startSession = vi.fn()
@@ -71,12 +71,14 @@ function mountShell({ collapsed = false, width = 300, drawer = false, shortcuts 
   const brandMark = <span data-testid="custom-brand-mark">M</span>
   const brandName = <span data-testid="custom-brand-name">Custom Brand</span>
   let current = { collapsed, width, drawer }
+  const resolvedLinks = navLinks ?? []
   const root = () => (
     <SidebarRoot
       drawer={current.drawer}
       collapsed={current.collapsed} width={current.width}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
-      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector(panels)} useEntryPins={selector => selector([])}
+      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector(panels)}
+      useNavLinks={selector => selector(resolvedLinks)} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector(shortcuts)}
       useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
@@ -145,8 +147,37 @@ function mountShell({ collapsed = false, width = 300, drawer = false, shortcuts 
 }
 
 describe('SidebarRoot shell', () => {
+  it('renders external nav-link rows beside the panel list (KEP-0008)', () => {
+    mountShell({
+      navLinks: [
+        { id: 'research.links.papers', order: 10, label: '论文工具', href: 'https://discovery.intern-ai.org.cn/paper' },
+        { id: 'research.links.researchApps', order: 11, label: '科研应用', href: 'https://discovery.intern-ai.org.cn/app' },
+      ],
+    })
+    const links = screen.getAllByRole('link')
+    expect(links.map(link => link.getAttribute('href'))).toEqual([
+      'https://discovery.intern-ai.org.cn/paper',
+      'https://discovery.intern-ai.org.cn/app',
+    ])
+    for (const link of links) {
+      expect(link.getAttribute('target')).toBe('_blank')
+      expect(link.getAttribute('rel')).toContain('noopener')
+      expect(link.getAttribute('aria-label')).toBeTypeOf('string')
+    }
+  })
+
+  it('keeps the rail to link glyphs only', () => {
+    mountShell({ collapsed: true, navLinks: [
+      { id: 'research.links.papers', order: 10, label: '论文工具', href: 'https://discovery.intern-ai.org.cn/paper' },
+    ] })
+    const link = screen.getAllByRole('link')[0]
+    expect(link).toBeDefined()
+    expect(link?.textContent).not.toContain('论文工具')
+  })
+
   it('puts navigation and workspaces in one viewport without scrolling primary controls or the footer', () => {
     mountShell({ panels: [{ id: 'notes' as SidebarPanelMetadata['id'], order: 1, label: 'Notes' }] })
+
     const viewport = document.querySelector('[data-sidebar-scrollport]')!
     expect(viewport.contains(screen.getByRole('navigation'))).toBe(true)
     expect(viewport.contains(screen.getByTestId('region'))).toBe(true)
@@ -190,7 +221,7 @@ describe('SidebarRoot shell', () => {
       usePanelInfo={neverHook} useSessions={neverHook} useSessionStatus={neverHook}
       useSessionRetainInfo={neverHook} useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
       {...allowAllAccess}
-      usePanels={select => select([])} useEntryPins={select => select([])}
+      usePanels={select => select([])} useNavLinks={select => select([])} useEntryPins={select => select([])}
       useEntryActions={select => select(false)} setPinned={vi.fn()} useShortcuts={select => select([shortcut])} />)
     const button = screen.getByRole('button', { name: 'New session' })
     expect(screen.getByRole('button', { name: 'Open sidebar' }).hasAttribute('data-sidebar-opener')).toBe(true)
@@ -233,7 +264,8 @@ describe('SidebarRoot shell', () => {
     render(<SidebarRoot
       collapsed={false} width={300} drawer={false}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
-      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
+      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])}
+      useNavLinks={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
       useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
@@ -266,7 +298,8 @@ describe('SidebarRoot shell', () => {
       drawer={false}
       collapsed={false} width={300}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
-      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
+      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])}
+      useNavLinks={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
       useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
@@ -291,7 +324,8 @@ describe('SidebarRoot shell', () => {
       drawer={false}
       collapsed={false} width={300}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
-      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
+      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])}
+      useNavLinks={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
       useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
@@ -320,7 +354,8 @@ describe('SidebarRoot shell', () => {
     render(<SidebarRoot
       collapsed={false} width={300} drawer={false}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
-      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
+      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])}
+      useNavLinks={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
       useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
@@ -372,7 +407,8 @@ describe('SidebarRoot shell', () => {
       drawer={false}
       collapsed={false} width={300}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
-      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
+      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])}
+      useNavLinks={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
       useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
@@ -444,7 +480,8 @@ describe('SidebarRoot shell', () => {
       drawer={false}
       collapsed width={56}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
-      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
+      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])}
+      useNavLinks={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
       useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
