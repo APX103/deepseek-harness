@@ -111,6 +111,7 @@ const VIEWER_GLOBAL_ROLE: RemoteAccessRole<'global'> = {
     'productAnalytics/enabled',
     'productAnalytics/report',
     'productAnalytics/watchPolicy',
+    'researchCatalog/links',
     'speech/cancelPreparation',
     'speech/catalog',
     'speech/follow',

@@ -45,6 +45,7 @@ const GLOBAL_ACTIONS = [
   'commands/list', 'llm/listConfigurableProviders', 'llm/listProviders', 'session/canOpenWorkspacePath',
   'session/control', 'session/list', 'session/modelCatalog', 'pluginEvents/follow',
   'productAnalytics/enabled', 'productAnalytics/report', 'productAnalytics/watchPolicy',
+  'researchCatalog/links',
   'speech/cancelPreparation', 'speech/catalog', 'speech/follow', 'speech/prepare', 'speech/transcribe',
   'workspace/follow',
 ] as const

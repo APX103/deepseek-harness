@@ -229,6 +229,8 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'agentPresets/list': 'owner-only', // owner agent presets
   'agentPresets/read': 'owner-only', // owner agent presets
   'agentPresets/select': 'owner-only', // owner agent presets
+  'researchCatalog/catalog': 'owner-only', // owner research catalog; joins deployment-private rosters (presets, MCP servers)
+  'researchCatalog/refresh': 'owner-only', // owner research catalog hub re-pull
   'agentTeams/setEnabled': 'owner-only', // owner Team mode
   'schedule/catalog': 'owner-only', // owner schedules
   'schedule/create': 'owner-only', // owner schedules
