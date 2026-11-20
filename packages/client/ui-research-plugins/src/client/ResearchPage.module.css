@@ -1,0 +1,433 @@
+/* 科研插件 page (KEP-0008): three capability tabs, a 研究阶段 rail, entry
+   cards, and detail views. Tokens follow the KEP-0007 inkstone palette;
+   focus styling goes through the shared focus-ring aliases only. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 16px 24px;
+  overflow-y: auto;
+  background: var(--dsw-alias-bg-primary);
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  margin: 96px auto;
+  border: 2px solid var(--dsw-alias-border-secondary);
+  border-top-color: var(--dsw-alias-state-business-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.failedState {
+  margin: auto;
+  text-align: center;
+}
+.failedText {
+  margin: 0 0 12px;
+  color: var(--dsw-alias-label-secondary);
+}
+.retryButton {
+  padding: 6px 16px;
+  border: 1px solid var(--dsw-alias-border-secondary);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-secondary);
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+.retryButton:hover {
+  background: var(--dsw-alias-bg-tertiary);
+}
+.retryButton:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+
+/* Header: tabs left, updated-at + refresh right. */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--dsw-alias-border-secondary);
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+.tab,
+.tabActive {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+  cursor: pointer;
+}
+.tab:hover {
+  background: var(--dsw-alias-bg-tertiary);
+  color: var(--dsw-alias-label-primary);
+}
+.tab:focus-visible,
+.tabActive:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+.tabActive {
+  background: var(--dsw-alias-bg-tertiary);
+  color: var(--dsw-alias-state-business-primary);
+  font-weight: 500;
+}
+.tabCount {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-secondary);
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.tabActive .tabCount {
+  background: var(--dsw-alias-bg-secondary);
+  color: var(--dsw-alias-state-business-primary);
+}
+.headerTail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.updated {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+.refresh:hover {
+  background: var(--dsw-alias-bg-tertiary);
+  color: var(--dsw-alias-label-primary);
+}
+.refresh:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+
+/* List body: rail left, cards right. */
+.body {
+  display: flex;
+  flex: 1;
+  gap: 20px;
+  padding-top: 16px;
+  min-height: 0;
+}
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 0 0 132px;
+}
+.railRow,
+.railActive {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.railRow:hover {
+  background: var(--dsw-alias-bg-tertiary);
+  color: var(--dsw-alias-label-primary);
+}
+.railRow:focus-visible,
+.railActive:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+.railActive {
+  background: var(--dsw-alias-bg-tertiary);
+  color: var(--dsw-alias-state-business-primary);
+  font-weight: 500;
+}
+.cards {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+.emptyState {
+  grid-column: 1 / -1;
+  margin: 48px 0;
+  text-align: center;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* Entry card. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--dsw-alias-border-secondary);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-secondary);
+}
+.card:hover {
+  border-color: var(--dsw-alias-border-primary);
+}
+.cardHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cardName {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.cardDescription {
+  margin: 0;
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cardActions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+.tryButton {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--dsw-alias-state-business-primary);
+  color: var(--dsw-alias-label-on-business);
+  font-size: 13px;
+  cursor: pointer;
+}
+.tryButton:hover {
+  opacity: 0.9;
+}
+.tryButton:focus-visible,
+.detailButton:focus-visible,
+.promptRow:focus-visible,
+.back:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+.detailButton {
+  padding: 5px 12px;
+  border: 1px solid var(--dsw-alias-border-secondary);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.detailButton:hover {
+  background: var(--dsw-alias-bg-tertiary);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* Badges. */
+.badgeAvailable,
+.badgeUnavailable,
+.sourceBadge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.badgeAvailable {
+  background: var(--dsw-alias-state-success-bg);
+  color: var(--dsw-alias-state-success-fg);
+}
+.badgeUnavailable {
+  background: var(--dsw-alias-bg-tertiary);
+  color: var(--dsw-alias-label-tertiary);
+}
+.sourceBadge {
+  background: var(--dsw-alias-bg-tertiary);
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* Detail view. */
+.detail {
+  padding-top: 16px;
+  max-width: 720px;
+}
+.back {
+  align-self: flex-start;
+  padding: 4px 8px;
+  margin-left: -8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.back:hover {
+  background: var(--dsw-alias-bg-tertiary);
+  color: var(--dsw-alias-label-primary);
+}
+.detailHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.detailName {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.detailDescription {
+  margin: 8px 0;
+  line-height: 1.6;
+  color: var(--dsw-alias-label-secondary);
+}
+.detailFacts {
+  display: flex;
+  gap: 24px;
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--dsw-alias-border-secondary);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-secondary);
+}
+.factLabel {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.factValue {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary);
+}
+.enableHint {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-tertiary);
+  font-size: 13px;
+  color: var(--dsw-alias-label-secondary);
+}
+.detailPrompts {
+  margin-top: 16px;
+}
+.promptsTitle {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+}
+.promptRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--dsw-alias-border-secondary);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-secondary);
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.promptRow:hover {
+  border-color: var(--dsw-alias-border-primary);
+  background: var(--dsw-alias-bg-tertiary);
+}
+.promptText {
+  line-height: 1.5;
+}
+.promptTry {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--dsw-alias-state-business-primary);
+  white-space: nowrap;
+}
+
+/* Sidebar entry: a plain inline host around the glyph (the hover anchor);
+   the sidebar owns the row button, selection state, and label around it. */
+.iconHost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hover flyout (prototype shell.js): fixed card below-right of the glyph,
+   one counted quick entry per capability tab. */
+.flyout {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--dsw-alias-border-secondary);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-elevated);
+  box-shadow: var(--dsw-shadow-lv3);
+  box-sizing: border-box;
+}
+.flyoutRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.flyoutRow:hover {
+  background: var(--dsw-alias-bg-tertiary);
+}
+.flyoutRow:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+.flyoutCount {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-tertiary);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
