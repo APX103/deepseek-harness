@@ -46,21 +46,10 @@ interface SessionResponse {
 /** @param ctx - client plugin context. */
 export async function apply(ctx: ClientContext): Promise<() => Promise<void>> {
   ctx.effect(() => ctx.locale.register(NS, { en, zh }), 'inkstone-account: dictionaries')
-  const endpoint = inkstoneAccountGlobal()
-  if (endpoint === undefined) return () => Promise.resolve()
-  let session: SessionResponse
-  try {
-    const response = await fetch(`${endpoint.baseUrl}/session`, { headers: { accept: 'application/json' } })
-    session = (await response.json()) as SessionResponse
-  } catch {
-    // Without a reachable endpoint the client stays as the host composed it.
-    return () => Promise.resolve()
-  }
-  const source = createInkstoneAccountSource(endpoint.baseUrl)
-  const balance = createInkstoneBalanceSource(endpoint.baseUrl)
-  let gate: (() => void) | undefined
-  // The Inkstone composition replaces the local-build fallback brand and the
-  // blank-home fallback whale.
+  // The product face is not account-gated: the brand and hero seats register
+  // unconditionally so the Inkstone surface keeps its face even while the
+  // account endpoint is unreachable (KEP-0007). The gate, launcher, and plan
+  // panel below stay endpoint-gated.
   ctx.effect(() => ctx.slots.inject('sidebar.brand.mark', () => ctx.slots.inject('sidebar.brand.name', function* () {
     yield ctx.slots.register({ name: 'sidebar.brand.mark', locale: NS }, InkstoneBrandMark)
     yield ctx.slots.register({ name: 'sidebar.brand.name', locale: NS }, InkstoneBrandName)
@@ -68,6 +57,20 @@ export async function apply(ctx: ClientContext): Promise<() => Promise<void>> {
   ctx.effect(() => ctx.slots.inject('conversation.hero.brand.mark', () => ctx.slots.register({
     name: 'conversation.hero.brand.mark',
   }, InkstoneHeroMark)), 'inkstone-account: hero mark')
+  const endpoint = inkstoneAccountGlobal()
+  if (endpoint === undefined) return () => Promise.resolve()
+  let session: SessionResponse
+  try {
+    const response = await fetch(`${endpoint.baseUrl}/session`, { headers: { accept: 'application/json' } })
+    session = (await response.json()) as SessionResponse
+  } catch {
+    // Without a reachable endpoint the account surfaces stay down; the brand
+    // face above is already on.
+    return () => Promise.resolve()
+  }
+  const source = createInkstoneAccountSource(endpoint.baseUrl)
+  const balance = createInkstoneBalanceSource(endpoint.baseUrl)
+  let gate: (() => void) | undefined
   ctx.effect(() => ctx.slots.inject('settings.launcher', () => ctx.slots.register({
     name: 'settings.launcher',
     locale: NS,

@@ -10,6 +10,7 @@
     "src/client/account-source.ts",
     "src/client/balance-source.ts",
     "src/client/InkstoneBrand.tsx",
+    "src/client/InkstoneFaceMark.tsx",
     "src/client/InkstoneLauncher.tsx",
     "src/client/locales.ts",
     "src/css-modules.d.ts",

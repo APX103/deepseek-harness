@@ -1,13 +1,14 @@
 // The composer remains in ConversationRoot so switching out of the blank-draft
 // phase does not remount its textarea.
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import {
   FISH_LOGO_PATH, FISH_LOGO_VIEWBOX, IconChevronDownOutlineRegular, IconFolderCloseRegular, IconFolderOpenRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
 import type { ConversationContentProps } from '../contract/slots.ts'
+import { pickGreeting } from './hero-greeting.ts'
 import css from './HeroShell.module.css'
 
 /** The owner's locale seat type, passed to hero chrome as a plain prop. */
@@ -101,8 +102,8 @@ function HeroFish({ hovering }: { hovering: boolean }) {
   return (
     <svg
       className={css.fish}
-      width={34}
-      height={(34 * FISH_LOGO_VIEWBOX.height) / FISH_LOGO_VIEWBOX.width}
+      width={44}
+      height={(44 * FISH_LOGO_VIEWBOX.height) / FISH_LOGO_VIEWBOX.width}
       viewBox={`0 0 ${FISH_LOGO_VIEWBOX.width} ${FISH_LOGO_VIEWBOX.height}`}
       fill="none"
       aria-hidden="true"
@@ -125,17 +126,26 @@ function HeroFish({ hovering }: { hovering: boolean }) {
 }
 
 /**
- * Render the hero chrome (headline only; no composer, no workspace row).
+ * Render the hero chrome (greeting headline only; no composer, no workspace
+ * row). The headline picks a greeting from the locale pool once per mount
+ * and never repeats the session's previous pick (KEP-0007).
  * @param props - see {@link HeroShellProps}.
  * @returns the centered hero element tree.
  */
 export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
   const [hovering, setHovering] = useState(false)
+  const greeting = useMemo(() => {
+    let previous: string | undefined
+    try { previous = sessionStorage.getItem('dsh-hero-greet') ?? undefined } catch { /* private mode */ }
+    const pick = pickGreeting(key => t(key), new Date(), previous)
+    try { sessionStorage.setItem('dsh-hero-greet', pick.remember) } catch { /* private mode */ }
+    return pick.greeting
+  }, [t])
   return (
     <div className={css.root}>
       <div className={css.stack}>
         <div className={css.headline}>
-          {/* figma 34:10412: fish 34×25 leading the headline, gap 10. */}
+          {/* inkstone task-title: head mark leading the serif greeting, gap 12. */}
           <span
             className={css.fishHitbox}
             onPointerEnter={(event) => {
@@ -146,15 +156,12 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
             }}
             onPointerLeave={() => { setHovering(false) }}
           >
-            {renderSlot('conversation.hero.brand.mark', { size: 34, className: css.fish }, {
+            {renderSlot('conversation.hero.brand.mark', { size: 44, className: css.fish }, {
               fallback: <HeroFish hovering={hovering} />,
             })}
           </span>
-          <span className={css.titleGroup}>
-            {/* Own element: keeps the headline text addressable apart from the badge. */}
-            <span>{t('hero.headline')}</span>
-            <span className={css.previewBadge}>{t('hero.preview')}</span>
-          </span>
+          {/* Own element: keeps the headline text addressable. */}
+          <span>{greeting}</span>
         </div>
         <div className={css.body}>
           {/* The composer remains mounted outside this component. */}

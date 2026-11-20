@@ -66,10 +66,21 @@
      drawn as the elevation hairline so it costs no layout; the shadow is the
      soft elevation tier. Fill: the input surface token (elevated in dark). */
   border: 0;
-  --dsw-elevation-stroke-color: var(--dsw-alias-border-l2);
-  border-radius: var(--dsw-radius-panel);
+  /* Inkstone face (KEP-0007): 16px radius, hairline inkstone stroke, the
+     prototype's soft shadow under the shared elevation stroke. */
+  --dsw-elevation-stroke-color: var(--dsh-ink-line);
+  border-radius: var(--dsw-radius-lg);
   background: var(--dsw-specific-input-major);
-  box-shadow: var(--dsw-elevation-soft);
+  box-shadow: var(--dsw-elevation-soft), 0 2px 10px rgb(0 0 0 / 4%);
+}
+
+/* Focus: the prototype ring — stroke warms toward 砚蓝, and a 4px soft halo
+   rides the shared keyboard ring color (pointer modality keeps it
+   transparent, matching the platform focus discipline). */
+.card:focus-within {
+  --dsw-elevation-stroke-color: color-mix(in srgb, var(--dsh-ink-accent) 50%, var(--dsh-ink-line));
+  outline: 4px solid color-mix(in srgb, var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)) 25%, transparent);
+  outline-offset: 0;
   /* The draft text follows the Settings font-size preference (the textarea,
      mirror, and backdrop all inherit from here, so the three layers stay in
      step); the line height keeps the default 10px leading via the shared px
@@ -105,7 +116,7 @@
   inset: 0;
   box-sizing: border-box;
   border: 1px dashed currentColor;
-  border-radius: var(--dsw-radius-panel);
+  border-radius: var(--dsw-radius-lg);
   color: var(--dsw-alias-border-l4);
   transition: color 100ms ease;
   pointer-events: none;
@@ -197,8 +208,8 @@
   overflow-wrap: anywhere;
   outline: none;
   color: var(--dsw-alias-label-primary);
-  /* Business blue, not brand-primary: that token resolves to ink in this sheet. */
-  caret-color: var(--dsw-alias-state-business-primary);
+  /* 砚蓝 accent, not brand-primary: that token resolves to ink in this sheet. */
+  caret-color: var(--dsh-ink-accent);
 }
 
 /* Lexical paragraphs are <p> blocks: strip the UA margins so the surface
@@ -235,7 +246,7 @@
 .placeholder {
   position: absolute;
   inset: 4px 8px auto 14px;
-  color: var(--dsw-alias-label-caption);
+  color: var(--dsh-ink-disabled);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -252,15 +263,23 @@
   cursor: pointer;
 }
 
-/* Hero (centered empty-state) keeps the 2-line floor (figma min-h 52 = ~2 × 24
-   line + 4pt); the docked composer collapses to the content height. */
-.hero .input {
-  min-height: 52px;
+/* Hero (centered empty-state) wears the prototype textarea: 15px draft text
+   (never below the user's content-size setting), 84px three-line floor, and
+   the 14/16 top pads. The docked composer collapses to the content height. */
+.hero .card {
+  font-size: max(15px, var(--dsh-content-font-size, 14px));
+  line-height: calc(max(15px, var(--dsh-content-font-size, 14px)) * 1.7);
 }
 
-/* The hero's 52px floor fits two lines, so its placeholder clamps at two
-   instead of the docked single line. */
+.hero .input {
+  min-height: 84px;
+  padding: 14px 16px 6px;
+}
+
+/* The hero's 84px floor fits three lines, so its placeholder clamps at two
+   instead of the docked single line; insets mirror the hero pads. */
 .hero .placeholder {
+  inset: 15px 16px auto;
   white-space: normal;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -337,16 +356,16 @@
   width: 32px;
   height: 32px;
   border: none;
-  border-radius: 999px;
-  corner-shape: round;
-  background: var(--dsw-specific-selector);
-  color: var(--dsw-alias-label-primary);
+  border-radius: var(--dsw-radius-sm);
+  background: transparent;
+  color: var(--dsh-ink-muted);
   cursor: pointer;
 }
 
 @media (hover: hover) {
   .add:hover:not(:disabled) {
-    background: var(--dsw-alias-interactive-bg-hover-solid);
+    background: var(--dsh-ink-hover);
+    color: var(--dsh-ink-ink);
   }
 }
 
@@ -365,12 +384,12 @@
   border-radius: var(--dsw-radius-sm);
   outline: none;
   background-color: transparent;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%237A8394' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 4px center;
   background-size: 12px 12px;
-  color: var(--dsw-alias-label-secondary);
-  font-size: 13px;
+  color: var(--dsh-ink-muted);
+  font-size: 13.5px;
   line-height: 20px;
   font-weight: 500;
   white-space: nowrap;
@@ -380,7 +399,8 @@
 
 @media (hover: hover) {
   .select:hover:not(:disabled) {
-    background-color: var(--dsw-alias-interactive-bg-hover);
+    background-color: var(--dsh-ink-hover);
+    color: var(--dsh-ink-ink);
   }
 }
 
@@ -399,9 +419,10 @@
   border: none;
   border-radius: 999px;
   corner-shape: round;
-  background: var(--dsw-alias-button-info-fill);
-  /* On-color ink, not the foreground token: the arrow stays white on the blue
-     fill in both themes (design 34:10465). */
+  /* Inkstone face: the ink disc (prototype `.send`), not the business blue. */
+  background: var(--dsw-alias-button-primary-fill);
+  /* On-color ink, not the foreground token: the arrow stays white on the ink
+     fill in both themes. */
   color: var(--dsw-alias-label-on-color);
   cursor: pointer;
   transition: background-color 100ms ease;
@@ -414,8 +435,14 @@
 
 @media (hover: hover) {
   .primary:hover:not(:disabled) {
-    background: var(--dsw-alias-button-info-hover);
+    background: var(--dsw-alias-button-primary-hover);
   }
+}
+
+/* The hero's send disc matches the prototype's 38px. */
+.hero .primary {
+  width: 38px;
+  height: 38px;
 }
 
 .primary:disabled {

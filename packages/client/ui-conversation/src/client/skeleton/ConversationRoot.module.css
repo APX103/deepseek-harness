@@ -594,8 +594,8 @@
    block for position:fixed descendants (pickers/modals), shrinking them. */
 .composerHero {
   align-self: center;
-  /* figma 75:8208 drew 12 between all three rows; the workspace row now sits
-     8 above the card (its margin-top restores 12 under the hero chrome). */
+  /* 8 between hero chrome / card / footer strip; the strip's own negative
+     margin fuses it to the card (KEP-0007). */
   gap: 8px;
   /* Foot inside the centered box floats the stack a bit above true center. */
   padding-bottom: 32px;
@@ -605,16 +605,36 @@
   z-index: 1;
 }
 
+/* Inkstone face (KEP-0007): the workspace row is the card's attached footer
+   strip — soft paper fill, hairline sides and bottom, square top edge shared
+   with the card's bottom border (the -9px margin cancels the stack's 8px gap
+   and fuses the 1px seam). Card-width so the outline reads as one capsule. */
 .heroWorkspaceRow {
   display: flex;
   align-items: center;
   gap: 2px;
   min-width: 0;
-  margin-top: 4px;
-  /* figma drew px 8; left nudged +12 so the chip's folder glyph lines up
-     closer to the card's inner controls below; right keeps the trailing
-     preset seat off the card edge. */
-  padding: 0 16px 0 20px;
+  width: 100%;
+  max-width: var(--dsh-composer-card-max-width);
+  margin-top: -9px;
+  margin-inline: auto;
+  padding: 3px 10px 5px;
+  border: 1px solid var(--dsh-ink-line);
+  border-top: 0;
+  border-radius: 0 0 var(--dsw-radius-lg) var(--dsw-radius-lg);
+  background: var(--dsh-ink-soft);
+  color: var(--dsh-ink-muted);
+}
+
+/* The strip's controls wear the prototype's muted footer ink (`.cmp-foot`). */
+.heroWorkspaceRow button {
+  color: var(--dsh-ink-muted);
+}
+
+@media (hover: hover) {
+  .heroWorkspaceRow button:hover {
+    color: var(--dsh-ink-ink);
+  }
 }
 
 /* Plugin options share the row, pushed to its right edge. */

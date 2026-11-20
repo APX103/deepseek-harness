@@ -4,7 +4,7 @@ export const NS = 'inkstone'
 
 /** English Inkstone account messages. */
 export const en = {
-  'brand.name': '端砚 Inkstone',
+  'brand.name': '书生·端砚',
   'menu.aria': 'Account menu',
   'menu.settings': 'Settings',
   'menu.uid': 'UID',
@@ -32,7 +32,7 @@ export const en = {
 
 /** Simplified Chinese Inkstone account messages. */
 export const zh = {
-  'brand.name': '端砚 Inkstone',
+  'brand.name': '书生·端砚',
   'menu.aria': '账号菜单',
   'menu.settings': '设置',
   'menu.uid': 'UID',

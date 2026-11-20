@@ -1,0 +1,61 @@
+/* Inkstone (书生·端砚) face tokens — KEP-0007.
+   Palette and type ported from the inkstone-client prototype (assets/app.css
+   :root): 砚蓝 brand, ink/muted/faint text grays, warm paper surfaces, serif
+   display face. Two jobs here:
+   1. `--dsh-ink-*` primitives consumed by the Inkstone-faced components
+      (hero, composer, brand marks, launcher).
+   2. A narrow set of chrome overrides on tokens the shared chrome already
+      reads — the sidebar fill family and the neutral hover/label grays — so
+      every page wears the same product skin without touching components. */
+body {
+  --dsh-ink-brand: #0C3C80;
+  --dsh-ink-brand-2: #1554A8;
+  --dsh-ink-ink: #1A2332;
+  --dsh-ink-muted: #3A4556;
+  --dsh-ink-faint: #7A8394;
+  --dsh-ink-line: #EEEEEB;
+  --dsh-ink-hover: #F3F3F0;
+  --dsh-ink-soft: #F6F6F3;
+  --dsh-ink-side: #F9F9F6;
+  --dsh-ink-disabled: #A8AFBB;
+  --dsh-ink-accent: #1554A8;
+  --dsh-ink-accent-soft: #F4F7FB;
+  --dsh-ink-glow: #E2A12E;
+  --dsh-ink-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+
+  /* Chrome overrides: the sidebar fill family is the one token that owns
+     every sidebar column (including the macOS vibrancy tint mix); the hover
+     and secondary-label grays shift from DSH's cool blues to inkstone's warm
+     ink grays. Alpha hovers keep compositing correct over any surface. */
+  --dsw-specific-sidebar-fill: var(--dsh-ink-side);
+  --dsw-specific-sidebar-nav-item-active: var(--dsh-ink-hover);
+  --dsw-specific-sidebar-nav-item-active-accent: var(--dsh-ink-hover);
+  --dsw-alias-interactive-bg-hover: rgba(51, 45, 28, 0.055);
+  --dsw-alias-interactive-bg-hover-solid: var(--dsh-ink-hover);
+  --dsw-alias-label-secondary: var(--dsh-ink-muted);
+  --dsw-alias-label-caption: var(--dsh-ink-faint);
+}
+
+body[data-ds-dark-theme] {
+  --dsh-ink-brand: #8FB2E8;
+  --dsh-ink-brand-2: #3F7DCF;
+  --dsh-ink-ink: #E6E8EB;
+  --dsh-ink-muted: #A2A8B2;
+  --dsh-ink-faint: #7D838D;
+  --dsh-ink-line: #2C3038;
+  --dsh-ink-hover: #262A31;
+  --dsh-ink-soft: #21252B;
+  --dsh-ink-side: #1C1F24;
+  --dsh-ink-disabled: #5D636C;
+  --dsh-ink-accent: #B8CEEA;
+  --dsh-ink-accent-soft: #162A46;
+  --dsh-ink-glow: #F0BC52;
+
+  --dsw-specific-sidebar-fill: var(--dsh-ink-side);
+  --dsw-specific-sidebar-nav-item-active: var(--dsh-ink-hover);
+  --dsw-specific-sidebar-nav-item-active-accent: var(--dsh-ink-hover);
+  --dsw-alias-interactive-bg-hover: rgba(230, 232, 235, 0.07);
+  --dsw-alias-interactive-bg-hover-solid: var(--dsh-ink-hover);
+  --dsw-alias-label-secondary: var(--dsh-ink-muted);
+  --dsw-alias-label-caption: var(--dsh-ink-faint);
+}

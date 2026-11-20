@@ -1,3 +1,7 @@
+/* Sidebar brand: the 书生 head sits in the mark slot (no box — the glyph is
+   the artwork); the wordmark wears the prototype's two-tone, 砚蓝 lead over
+   ink tail. */
 .markBox { display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .markBox img { display: block; border-radius: 6px; }
-.name { font-size: 15px; font-weight: 600; letter-spacing: 0.01em; color: var(--dsw-alias-label-primary); user-select: none; }
+.name { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; color: var(--dsw-alias-label-primary); user-select: none; white-space: nowrap; }
+.nameLead { color: var(--dsh-ink-brand); }

@@ -55,6 +55,18 @@ Range.prototype.getBoundingClientRect = () => ({
   top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}),
 })
 
+// The hero greeting draws from the locale pools (KEP-0007), so tests assert the
+// rendered copy is one of the zh pool entries rather than a fixed headline.
+const zhGreetingPool = (): string[] => [
+  zh['hero.headline'], zh['hero.greet.any'], zh['hero.greet.morning'],
+  zh['hero.greet.noon'], zh['hero.greet.evening'], zh['hero.greet.night'], zh['hero.greet.weekend'],
+].flatMap(value => value.split('|').map(entry => entry.trim())).filter(entry => entry !== '')
+
+// The greeting renders in its own span; match that exact element.
+function zhGreeting(view: { getByText: (m: (content: string, el: Element | null) => boolean) => HTMLElement }) {
+  return view.getByText((_, el) => el?.tagName === 'SPAN' && zhGreetingPool().includes(el.textContent ?? ''))
+}
+
 
 function fakeWiring() {
   const sink = vi.fn(() => Promise.resolve({ kind: 'success' as const }))
@@ -422,20 +434,27 @@ function mount(
 }
 
 describe('Hero chrome', () => {
-  it('renders the English preview badge through the hero locale seat', () => {
-    const renderSlot = vi.fn<(key: string, owner: object, opts?: { fallback?: ReactNode }) => ReactNode>(() => null)
-    const view = render(<HeroShell t={makeTranslate(en, commonEn)} renderSlot={renderSlot as never} />)
-    expect(view.getByText('Start your research')).toBeTruthy()
-    expect(view.getByText('Preview')).toBeTruthy()
-    expect(renderSlot).toHaveBeenCalledOnce()
-    expect(renderSlot.mock.calls[0]?.[0]).toBe('conversation.hero.brand.mark')
-    const brandMarkOwner = renderSlot.mock.calls[0]?.[1]
-    if (brandMarkOwner === undefined || !('size' in brandMarkOwner) || !('className' in brandMarkOwner)) {
-      throw new Error('hero brand-mark owner must provide size and className')
+  it('renders a greeting pool pick through the hero locale seat', () => {
+    // Deterministic pick: the first candidate of the any-pool (KEP-0007).
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0)
+    try {
+      const renderSlot = vi.fn<(key: string, owner: object, opts?: { fallback?: ReactNode }) => ReactNode>(() => null)
+      const view = render(<HeroShell t={makeTranslate(en, commonEn)} renderSlot={renderSlot as never} />)
+      expect(view.getByText('Start with one question, researcher')).toBeTruthy()
+      // The preview badge left the hero with the Inkstone face.
+      expect(view.queryByText('Preview')).toBeNull()
+      expect(renderSlot).toHaveBeenCalledOnce()
+      expect(renderSlot.mock.calls[0]?.[0]).toBe('conversation.hero.brand.mark')
+      const brandMarkOwner = renderSlot.mock.calls[0]?.[1]
+      if (brandMarkOwner === undefined || !('size' in brandMarkOwner) || !('className' in brandMarkOwner)) {
+        throw new Error('hero brand-mark owner must provide size and className')
+      }
+      expect(brandMarkOwner.size).toBe(44)
+      expect(brandMarkOwner.className).toBeTypeOf('string')
+      expect(renderSlot.mock.calls[0]?.[2]?.fallback).toBeTruthy()
+    } finally {
+      random.mockRestore()
     }
-    expect(brandMarkOwner.size).toBe(34)
-    expect(brandMarkOwner.className).toBeTypeOf('string')
-    expect(renderSlot.mock.calls[0]?.[2]?.fallback).toBeTruthy()
   })
 })
 
@@ -595,8 +614,9 @@ describe('ConversationRoot resident composer', () => {
     expect(b.slotCalls).not.toContain('conversation.session.header.utilities')
     expect(b.headerFactory).not.toHaveBeenCalled()
     expect(b.slotCalls).not.toContain('conversation.session.header.actions')
-    expect(b.view.getByText('开启你的科研工作')).toBeTruthy()
-    expect(b.view.getByText('预览版')).toBeTruthy()
+    zhGreeting(b.view)
+    // The preview badge left the hero with the Inkstone face.
+    expect(b.view.queryByText('预览版')).toBeNull()
     expect(b.view.queryByTestId('view-chat')).toBeNull()
     // The same machine-backed textarea is live in the hero, and the
     // persistence mirror stays bound (ConversationSession mounts chrome-hidden
@@ -661,7 +681,7 @@ describe('ConversationRoot resident composer', () => {
     // blank the column for the history round-trip.
     const root = b.view.container.querySelector('[data-phase]')
     expect(root?.getAttribute('data-phase')).toBe('hero')
-    expect(b.view.getByText('开启你的科研工作')).toBeTruthy()
+    zhGreeting(b.view)
     expect(b.view.getByRole('textbox')).toBeTruthy()
   })
 

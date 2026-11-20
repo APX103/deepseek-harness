@@ -197,7 +197,9 @@ async function handleSessionRequest(
       return
     }
     const code = (error as { code?: string }).code ?? 'AUTH_REJECTED'
-    const message = error instanceof Error ? error.message : '登录失败'
+    // Copy is locale-owned (verify-client-ui-i18n): the wire message falls
+    // back to the machine code; readers localize from `code`.
+    const message = error instanceof Error ? error.message : code
     const status = code.startsWith('AUTH_') ? 401 : 500
     response.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify({ code, message }))
   }

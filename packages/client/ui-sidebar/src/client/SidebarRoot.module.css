@@ -453,9 +453,10 @@
   padding: 8px 12px;
   margin: 0;
   box-sizing: border-box;
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: var(--dsw-radius-md);
-  background: var(--dsw-alias-button-elevated-fill);
+  /* Inkstone face (KEP-0007): hairline warm stroke, 8px radius, paper fill. */
+  border: 1px solid var(--dsh-ink-line);
+  border-radius: var(--dsw-radius-sm);
+  background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-primary);
   font-size: 14px;
   font-weight: 500;

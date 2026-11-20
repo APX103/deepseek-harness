@@ -165,9 +165,11 @@ export function ConversationContent(props: ConversationContentProps) {
   const composerBar = (
     <div className={clsx(css.composerStack, hero && css.composerHero)}>
       {hero && <HeroShell t={t} renderSlot={renderSlot} />}
-      {hero && heroWorkspaceRow}
       {zone !== undefined && renderSlot('conversation.input.dock', zone)}
       {inputBar}
+      {/* Inkstone anatomy (KEP-0007): the workspace strip attaches under the
+          card as its footer, not a row above it. */}
+      {hero && heroWorkspaceRow}
     </div>
   )
 

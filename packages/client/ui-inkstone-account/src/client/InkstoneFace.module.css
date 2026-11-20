@@ -1,0 +1,25 @@
+/* 书生 face mark: the head fills its box; the spark floats past the top-right
+   corner like the prototype's hero (`.spark.s1`), inside a generous hitbox. */
+.root {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  overflow: visible;
+}
+
+.head {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.spark {
+  position: absolute;
+  top: -10%;
+  right: -14%;
+  width: 38%;
+  height: 38%;
+  display: block;
+}
