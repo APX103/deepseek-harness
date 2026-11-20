@@ -107,6 +107,19 @@ export function ConversationContent(props: ConversationContentProps) {
     ? undefined
     : workspaceDisplayTitle(storedChipTitle, t('workspace.defaultName'))
 
+  // Inkstone anatomy (KEP-0007, design doc): the preset chip rides the card's
+  // control row like the prototype's in-card mode selector, and the footer
+  // strip keeps only the workspace selector. The wrapper keeps the chip's
+  // clicks out of the inert card's workspace-trigger click.
+  const heroPreset = hero ? (
+    <span
+      className={css.heroPreset}
+      onClick={(event) => { event.stopPropagation() }}
+    >
+      {renderSlot('conversation.hero.agentPreset', {})}
+    </span>
+  ) : null
+
   const heroWorkspaceRow = (
     <div className={css.heroWorkspaceRow}>
       <WorkspaceChip
@@ -129,7 +142,6 @@ export function ConversationContent(props: ConversationContentProps) {
         },
         onClose: () => { setPickerOpen(false) },
       })}
-      {renderSlot('conversation.hero.agentPreset', {})}
       {sessionId === undefined ? null : <div className={css.heroOptions}>{renderSlot('conversation.hero.options', {})}</div>}
     </div>
   )
@@ -147,6 +159,7 @@ export function ConversationContent(props: ConversationContentProps) {
   const inputBar = renderSlot('conversation.composer.bar', {
     variant: hero ? 'hero' : 'composer',
     occurrence: props.variant,
+    ...(heroPreset !== null ? { toolbar: heroPreset } : {}),
     ...(inert
       ? {
         disabled: true,

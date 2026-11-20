@@ -558,6 +558,13 @@ export interface ComposerBarOwnerProps {
   placeholder?: string
   /** Optional content rendered above the composer surface. */
   accessory?: ReactNode
+  /**
+   * Content opening the card's control row, before the mode seats (the
+   * Inkstone hero preset chip rides it). The content keeps its own clicks:
+   * the row never forwards them to the card, so an inert workspace-trigger
+   * card stays a single pick target everywhere else.
+   */
+  toolbar?: ReactNode
 }
 
 /** One composer's entry in the document-level paste route. */

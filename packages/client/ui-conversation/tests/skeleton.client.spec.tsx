@@ -940,15 +940,31 @@ describe('ConversationRoot resident composer', () => {
     expect(b.slotCalls).toContain('conversation.hero.options')
   })
 
-  it('seats the New Session options after the agent-preset chip, and only for a Session', () => {
+  it('seats the preset chip in the card row, and the New Session options after the workspace chip in the footer strip', () => {
     const b = mount(sessionSnapshotOf({ blank: true }))
+    // Inkstone anatomy: the preset chip rides the card's control row, not the
+    // footer strip (both choices are only open before the first message).
     const preset = within(b.view.container).getByTestId('view-conversation.hero.agentPreset')
+    expect(preset.closest('[data-composer-card]')).not.toBeNull()
+    const chip = b.view.getByRole('button', { name: '选择工作区' })
+    expect(chip.closest('[data-composer-card]')).toBeNull()
     const options = within(b.view.container).getByTestId('view-conversation.hero.options')
-    expect(options.parentElement?.previousElementSibling).toBe(preset)
+    expect(options.parentElement?.previousElementSibling).toBe(chip)
 
     const cold = mount(sessionSnapshotOf(), [], undefined, { sessionId: undefined })
     expect(cold.slotCalls).toContain('conversation.hero.agentPreset')
     expect(cold.slotCalls).not.toContain('conversation.hero.options')
+  })
+
+  it('keeps the preset chip clicks out of the inert card workspace-trigger click', () => {
+    const b = mount(sessionSnapshotOf(), [], undefined, { sessionId: undefined })
+    const chip = b.view.getByRole('button', { name: '选择工作区' })
+    // The chip rides the card's row, but its click opens the preset seat, not
+    // the workspace picker: the wrapper stops it before the card's own.
+    fireEvent.click(within(b.view.container).getByTestId('view-conversation.hero.agentPreset'))
+    expect(chip.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(b.view.container.querySelector('[data-composer-card]') as HTMLElement)
+    expect((b.pickerOwner() as { open: boolean }).open).toBe(true)
   })
 
   it('prompt failure renders the promptError strip (ordinary failure, no transaction UI)', () => {

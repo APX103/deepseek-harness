@@ -626,7 +626,7 @@
   color: var(--dsh-ink-muted);
 }
 
-/* The strip's controls wear the prototype's muted footer ink (`.cmp-foot`). */
+/* The strip's control wears the prototype's muted footer ink (`.cmp-foot`). */
 .heroWorkspaceRow button {
   color: var(--dsh-ink-muted);
 }
@@ -635,6 +635,14 @@
   .heroWorkspaceRow button:hover {
     color: var(--dsh-ink-ink);
   }
+}
+
+/* The preset chip's seat in the card's control row: a tight wrapper so the
+   chip compresses with the row, reading as one more control beside the
+   toolbar buttons (the chip's own styles live in ui-agent-preset). */
+.heroPreset {
+  display: inline-flex;
+  min-width: 0;
 }
 
 /* Plugin options share the row, pushed to its right edge. */
