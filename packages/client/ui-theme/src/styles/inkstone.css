@@ -59,3 +59,22 @@ body[data-ds-dark-theme] {
   --dsw-alias-label-secondary: var(--dsh-ink-muted);
   --dsw-alias-label-caption: var(--dsh-ink-faint);
 }
+
+/* macOS desktop paints the sidebar over window vibrancy with a blue-washed
+   translucent tint (design-platform.css's darwin set). The Inkstone sidebar is
+   the prototype's flat warm paper column in both themes, so this face
+   restates that darwin set opaque and wash-free; the selectors match
+   design-platform's, and this file imports later, so these win the cascade. */
+html[data-platform='darwin'] body {
+  --dsw-specific-sidebar-tint: var(--dsh-ink-side);
+  --dsw-specific-sidebar-wash-top: rgb(0 0 0 / 0);
+  --dsw-specific-sidebar-wash-top-clear: rgb(0 0 0 / 0);
+  --dsw-specific-sidebar-wash-bottom: rgb(0 0 0 / 0);
+  --dsw-specific-sidebar-wash-bottom-clear: rgb(0 0 0 / 0);
+}
+
+html[data-platform='darwin'] body[data-ds-dark-theme] {
+  --dsw-specific-sidebar-tint: var(--dsh-ink-side);
+  --dsw-specific-sidebar-wash-top: rgb(0 0 0 / 0);
+  --dsw-specific-sidebar-wash-bottom: rgb(0 0 0 / 0);
+}
