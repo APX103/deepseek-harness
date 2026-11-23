@@ -614,6 +614,9 @@
   align-items: center;
   gap: 2px;
   min-width: 0;
+  /* The card is border-box; without this the strip's padding and hairline add
+     past its max-width and it overhangs the card on both sides. */
+  box-sizing: border-box;
   width: 100%;
   max-width: var(--dsh-composer-card-max-width);
   margin-top: -9px;
